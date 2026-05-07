@@ -46,14 +46,32 @@ export function resolveImageUrl(path?: string) {
     return ''
   }
 
-  if (/^https?:\/\//i.test(path)) {
-    return path
+  const normalizedPath = path.trim().replace(/\\/g, '/')
+  const UPLOAD_ORIGIN = 'https://jsk9x6z4-3000.asse.devtunnels.ms'
+
+  if (/^https?:\/\//i.test(normalizedPath)) {
+    return normalizedPath
+  }
+
+  if (normalizedPath.startsWith('/uploads/') || normalizedPath.startsWith('uploads/')) {
+    const uploadPath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`
+    return new URL(uploadPath, UPLOAD_ORIGIN).toString()
   }
 
   try {
-    return new URL(path, 'https://jsk9x6z4-3000.asse.devtunnels.ms').toString()
+    const storeApiUrl = import.meta.env.VITE_CUAHANG_API_URL as string | undefined
+    const customerApiUrl = import.meta.env.VITE_KHACHHANG_API_URL as string | undefined
+
+    const fallbackBase =
+      typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : UPLOAD_ORIGIN
+
+    const baseUrl = storeApiUrl || customerApiUrl || fallbackBase
+
+    return new URL(normalizedPath, baseUrl).toString()
   } catch {
-    return path
+    return normalizedPath
   }
 }
 

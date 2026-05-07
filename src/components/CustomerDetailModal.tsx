@@ -1,4 +1,3 @@
-import type { Customer } from '../api'
 import type { CustomerDetail } from '../types/customer'
 import {
   createInitials,

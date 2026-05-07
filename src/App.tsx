@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { deleteCustomer, getCustomers, type Customer } from './api'
 import CustomerDetailModal from './components/CustomerDetailModal'
 import CustomerReportModal from './components/CustomerReportModal'
+import StoreFieldReportPage from './components/StoreFieldReportPage'
 import { CREATOR_NAME_MAP, MAPPED_CREATOR_CODES } from './constants/creatorNames'
 import { formatDate, getDateKey, normalizeSearchText, sameDay } from './utils/customerFormatters'
 import type { CustomerDetail } from './types/customer'
@@ -9,6 +10,7 @@ import type { CustomerDetail } from './types/customer'
 type Status = 'idle' | 'loading' | 'ready' | 'error'
 
 function App() {
+  const [activePage, setActivePage] = useState<'customers' | 'stores'>('customers')
   const [customers, setCustomers] = useState<Customer[]>([])
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState<string | null>(null)
@@ -126,6 +128,10 @@ function App() {
     setSelectedCustomer(customer as CustomerDetail)
   }
 
+  if (activePage === 'stores') {
+    return <StoreFieldReportPage onBack={() => setActivePage('customers')} />
+  }
+
   return (
     <div className="app-shell">
       <div className="ambient ambient-left" />
@@ -202,6 +208,9 @@ function App() {
         </div>
 
         <div className="toolbar__actions">
+          <button className="report-button" type="button" onClick={() => setActivePage('stores')}>
+            Báo cáo thực địa
+          </button>
           <button className="report-button" type="button" onClick={() => setIsReportOpen(true)}>
             Báo cáo
           </button>
