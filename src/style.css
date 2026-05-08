@@ -183,6 +183,7 @@
     background: rgba(255, 255, 255, 0.92);
     border: 1px solid rgba(148, 163, 184, 0.18);
     box-shadow: 0 18px 35px rgba(15, 23, 42, 0.08);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
   }
 
   .stat-card span {
@@ -197,6 +198,11 @@
     font-size: clamp(1.6rem, 3vw, 2.5rem);
     color: #0f172a;
   }
+
+.stat-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 26px 50px rgba(15, 23, 42, 0.12);
+}
 
   .toolbar {
     display: flex;
@@ -282,6 +288,18 @@
     border-radius: 14px;
     transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   }
+
+.refresh-button:focus-visible,
+.report-button:focus-visible,
+.retry-button:focus-visible,
+.delete-button:focus-visible,
+.detail-button:focus-visible,
+.close-button:focus-visible,
+.login-button:focus-visible,
+.logout-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.18);
+}
 
   .toolbar__actions {
     display: flex;
@@ -415,6 +433,7 @@
 
   .customer-table tbody tr:hover {
     background: rgba(226, 232, 240, 0.55);
+    transition: background-color 0.18s ease;
   }
 
   .customer-cell {

@@ -67,13 +67,7 @@ function App() {
     setIsAuthLoading(false)
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn')
-    localStorage.removeItem('username')
-    setIsLoggedIn(false)
-    setActivePage('customers')
-    setCustomers([])
-  }
+
 
   useEffect(() => {
     void loadCustomers()
@@ -284,9 +278,6 @@ function App() {
           </button>
           <button className="refresh-button" type="button" onClick={() => void handleRefreshCustomers()}>
             Làm mới dữ liệu
-          </button>
-          <button className="logout-button" type="button" onClick={handleLogout}>
-            Đăng xuất
           </button>
         </div>
       </section>
