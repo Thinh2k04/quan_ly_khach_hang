@@ -13,9 +13,7 @@ type Status = 'idle' | 'loading' | 'ready' | 'error'
 const NOTICE_HIDE_DELAY_MS = 2500
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('isLoggedIn') === 'true'
-  })
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isAuthLoading, setIsAuthLoading] = useState(false)
   const [activePage, setActivePage] = useState<'customers' | 'stores'>('customers')
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -61,8 +59,6 @@ function App() {
 
     // Check exact credentials
     if (username === 'ACBT999' && password === '1111') {
-      localStorage.setItem('isLoggedIn', 'true')
-      localStorage.setItem('username', username)
       setIsLoggedIn(true)
     } else {
       setError('Tên đăng nhập hoặc mật khẩu không chính xác')
