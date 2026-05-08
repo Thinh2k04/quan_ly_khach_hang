@@ -50,6 +50,7 @@ export default function LoginPage({ onLogin, isLoading = false, error: parentErr
               placeholder="Nhập tên đăng nhập"
               disabled={isLoading}
               autoFocus
+              autoComplete="off"
             />
           </label>
 
@@ -61,6 +62,7 @@ export default function LoginPage({ onLogin, isLoading = false, error: parentErr
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Nhập mật khẩu"
               disabled={isLoading}
+              autoComplete="off"
             />
           </label>
 
