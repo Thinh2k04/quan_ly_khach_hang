@@ -8,7 +8,7 @@ import {
   type Store,
   type StorePayload,
 } from '../api'
-import { formatDate, getDateKey, resolveImageUrl } from '../utils/customerFormatters'
+import { formatDateToVnTime, getDateKey, resolveImageUrl } from '../utils/customerFormatters'
 import ConfirmDialog from './ConfirmDialog'
 import StoreReportModal from './StoreReportModal'
 
@@ -280,7 +280,7 @@ function formatStoreDateTime(value: unknown): string {
     return '—'
   }
 
-  return formatDate(value)
+  return formatDateToVnTime(value)
 }
 
 function getWeekKey(dateKey: string): string {
