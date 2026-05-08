@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
 import type { Store } from '../api'
-import { resolveImageUrl } from '../utils/customerFormatters'
 
 type StoreReportModalProps = {
   stores: Store[]
@@ -56,16 +55,6 @@ function getCreatorLabel(store: Store): string {
   }
 
   return 'Chưa rõ'
-}
-
-function getImageUrl(store: Store): string | null {
-  const value = store.HinhAnh ?? store['hinh_anh'] ?? store['AnhCH'] ?? store['anh']
-
-  if (typeof value === 'string' && value.trim()) {
-    return value.trim()
-  }
-
-  return null
 }
 
 function getRawDate(store: Store): string | null {
@@ -275,19 +264,6 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
       .map(([label, value]) => ({ label, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10)
-  }, [filteredStores])
-
-  const imageItems = useMemo(() => {
-    return filteredStores
-      .map((store) => ({
-        id: String(store.id ?? store.Id ?? store.ID ?? store.ma_ch ?? store.MaCH ?? store.TenCH ?? Math.random()),
-        name: String(store.TenCH ?? 'Cửa hàng'),
-        address: String(store.DiaChi ?? 'Chưa có địa chỉ'),
-        createdAt: getStoreCreatedAt(store),
-        image: resolveImageUrl(getImageUrl(store) ?? ''),
-      }))
-      .filter((item) => Boolean(item.image))
-      .slice(0, 8)
   }, [filteredStores])
 
   const hasCompetitor = filteredStores.filter((store) => Boolean(store.CoHangDoiThuKhong)).length
@@ -631,35 +607,11 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
             <span>Có hàng đối thủ</span>
             <strong>{hasCompetitor}</strong>
           </article>
-          <article className="report-kpi-card">
-            <span>Số ảnh thực địa</span>
-            <strong>{imageItems.length}</strong>
-          </article>
         </div>
 
         <div className="report-grid">
           <ReportBars title="Theo người tạo" items={byCreator} barClassName="report-bar report-bar--creator" />
           <ReportBars title="Theo tỉnh/thành" items={byProvince} barClassName="report-bar report-bar--day" />
-
-          <section className="report-card report-card--full">
-            <h3>Ảnh thực địa từ dữ liệu</h3>
-            {imageItems.length === 0 ? (
-              <p className="report-empty">Không có ảnh trong dữ liệu hiện tại.</p>
-            ) : (
-              <div className="store-image-grid">
-                {imageItems.map((item) => (
-                  <article className="store-image-card" key={item.id}>
-                    <img src={item.image} alt={item.name} loading="lazy" />
-                    <div>
-                      <strong>{item.name}</strong>
-                      <span>{item.address}</span>
-                      <span>Ngày tạo: {item.createdAt}</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
 
           <section className="report-card report-card--full">
             <h3>Bảng tỷ lệ thực địa theo người tạo</h3>
