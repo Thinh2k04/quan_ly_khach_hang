@@ -385,6 +385,17 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
     }
   }
 
+  // Debounce search: call handleSearch 300ms after user stops typing
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      void handleSearch()
+    }, 300)
+
+    return () => clearTimeout(handle)
+  }, [search])
+
+  
+
   const openEditForm = (store: Store) => {
     setEditingStore(store)
     setForm(toPayload(store))
@@ -538,6 +549,7 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
 
       <section className="toolbar">
         <div className="toolbar__filters">
+
           <label className="search-box" htmlFor="store-search">
             <span>Tìm kiếm cửa hàng</span>
             <input
@@ -601,9 +613,7 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
           <button className="report-button" type="button" onClick={onBack}>
             Về khách hàng
           </button>
-          <button className="report-button" type="button" onClick={() => void handleSearch()}>
-            Tìm kiếm
-          </button>
+          
           <button className="report-button" type="button" onClick={() => setIsReportOpen(true)}>
             Báo cáo
           </button>
