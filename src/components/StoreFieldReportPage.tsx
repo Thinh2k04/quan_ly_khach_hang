@@ -8,7 +8,7 @@ import {
   type Store,
   type StorePayload,
 } from '../api'
-import { resolveImageUrl } from '../utils/customerFormatters'
+import { formatDate, getDateKey, resolveImageUrl } from '../utils/customerFormatters'
 import StoreReportModal from './StoreReportModal'
 
 type Status = 'idle' | 'loading' | 'ready' | 'error'
@@ -270,22 +270,7 @@ function getStoreDateKey(store: Store): string {
     return ''
   }
 
-  const isoMatch = /^(\d{4}-\d{2}-\d{2})T/.exec(rawDate)
-
-  if (isoMatch) {
-    return isoMatch[1]
-  }
-
-  const date = new Date(rawDate)
-
-  if (Number.isNaN(date.getTime())) {
-    return ''
-  }
-
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  return getDateKey(rawDate)
 }
 
 function formatStoreDateTime(value: unknown): string {
@@ -293,16 +278,7 @@ function formatStoreDateTime(value: unknown): string {
     return '—'
   }
 
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+  return formatDate(value)
 }
 
 function getWeekKey(dateKey: string): string {

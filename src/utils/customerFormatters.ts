@@ -6,20 +6,69 @@ export function normalizeSearchText(value: string) {
     .trim()
 }
 
+const VN_TIME_ZONE = 'Asia/Ho_Chi_Minh'
+
+function parseDateValue(value: string): Date | null {
+  const trimmed = value.trim()
+
+  if (!trimmed) {
+    return null
+  }
+
+  const date = new Date(trimmed)
+  if (!Number.isNaN(date.getTime())) {
+    return date
+  }
+
+  const normalized = trimmed.replace(' ', 'T')
+  const fallbackDate = new Date(normalized)
+  return Number.isNaN(fallbackDate.getTime()) ? null : fallbackDate
+}
+
+function getDatePartsInVnTimeZone(date: Date) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: VN_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+
+  const year = parts.find((part) => part.type === 'year')?.value
+  const month = parts.find((part) => part.type === 'month')?.value
+  const day = parts.find((part) => part.type === 'day')?.value
+
+  if (!year || !month || !day) {
+    return null
+  }
+
+  return { year, month, day }
+}
+
 export function formatDate(value?: string) {
   if (!value) {
     return 'Chưa có'
   }
 
-  const date = new Date(value)
+  // If value looks like ISO timestamp (e.g., "2026-05-07T18:55:37.430Z"), 
+  // extract hour and minute directly without timezone conversion
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value.trim())
+  
+  if (isoMatch) {
+    const [, year, month, day, hour, minute] = isoMatch
+    const dayNum = String(Number(day))
+    const monthNum = String(Number(month))
+    return `${hour}:${minute} ${dayNum} thg ${monthNum}, ${year}`
+  }
 
-  if (Number.isNaN(date.getTime())) {
+  const date = parseDateValue(value)
+  if (!date) {
     return value
   }
 
   return new Intl.DateTimeFormat('vi-VN', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: VN_TIME_ZONE,
   }).format(date)
 }
 
@@ -28,17 +77,17 @@ export function getDateKey(value?: string) {
     return ''
   }
 
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
+  const date = parseDateValue(value)
+  if (!date) {
     return ''
   }
 
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+  const parts = getDatePartsInVnTimeZone(date)
+  if (!parts) {
+    return ''
+  }
 
-  return `${year}-${month}-${day}`
+  return `${parts.year}-${parts.month}-${parts.day}`
 }
 
 export function resolveImageUrl(path?: string) {
@@ -94,18 +143,22 @@ export function sameDay(dateValue?: string) {
     return false
   }
 
-  const date = new Date(dateValue)
-
-  if (Number.isNaN(date.getTime())) {
+  const date = parseDateValue(dateValue)
+  if (!date) {
     return false
   }
 
   const today = new Date()
+  const dateParts = getDatePartsInVnTimeZone(date)
+  const todayParts = getDatePartsInVnTimeZone(today)
+  if (!dateParts || !todayParts) {
+    return false
+  }
 
   return (
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate()
+    dateParts.year === todayParts.year &&
+    dateParts.month === todayParts.month &&
+    dateParts.day === todayParts.day
   )
 }
 

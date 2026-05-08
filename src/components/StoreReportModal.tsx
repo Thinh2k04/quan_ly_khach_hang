@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { Store } from '../api'
 import { resolveImageUrl } from '../utils/customerFormatters'
 
@@ -22,12 +22,25 @@ type StorePercentRow = {
   coKeAcbt: string
   traThuongTb: string
   hangDoiThuKe: string
+  keLays: string
+  keOishi: string
+  kePoca: string
+  keKhac: string
   viAcbt: string
   hangDoiThuVi: string
+  viLays: string
+  viOishi: string
+  viPoca: string
+  viKhac: string
   chanGaAcbt: string
   chanGaDoiThu: string
   bimKhoAcbt: string
+  bimKhoLays: string
+  bimKhoOishi: string
+  bimKhoPoca: string
+  bimKhoKhac: string
   bimUotAcbt: string
+  bimUotDoiThu: string
 }
 
 function getCreatorLabel(store: Store): string {
@@ -67,14 +80,14 @@ function getStoreDateKey(store: Store): string {
     return ''
   }
 
-  const isoMatch = /^(\d{4}-\d{2}-\d{2})T/.exec(rawDate)
-
+  const value = rawDate.trim()
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(value)
   if (isoMatch) {
-    return isoMatch[1]
+    const [, year, month, day] = isoMatch
+    return `${year}-${month}-${day}`
   }
 
-  const date = new Date(rawDate)
-
+  const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
     return ''
   }
@@ -83,6 +96,36 @@ function getStoreDateKey(store: Store): string {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function getStoreCreatedAt(store: Store): string {
+  const rawDate =
+    store['ngay_tao'] ??
+    store['NgayTao'] ??
+    store['created_at'] ??
+    store['CreatedAt'] ??
+    store['ngayTao']
+
+  if (typeof rawDate !== 'string' || !rawDate.trim()) {
+    return 'Chưa có'
+  }
+
+  const value = rawDate.trim()
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(value)
+  if (isoMatch) {
+    const [, year, month, day, hour, minute] = isoMatch
+    return `${hour}:${minute} ${Number(day)} thg ${Number(month)}, ${year}`
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
 }
 
 function getWeekKey(dateKey: string): string {
@@ -159,6 +202,7 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
   const [creatorFilter, setCreatorFilter] = useState('')
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('day')
   const [dateFilterValue, setDateFilterValue] = useState('')
+  const dragScrollRef = useRef({ isDragging: false, startX: 0, startScrollLeft: 0 })
 
   const creatorOptions = useMemo(() => {
     return Array.from(new Set(stores.map(getCreatorLabel))).sort((a, b) => a.localeCompare(b))
@@ -222,6 +266,7 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
         id: String(store.id ?? store.Id ?? store.ID ?? store.ma_ch ?? store.MaCH ?? store.TenCH ?? Math.random()),
         name: String(store.TenCH ?? 'Cửa hàng'),
         address: String(store.DiaChi ?? 'Chưa có địa chỉ'),
+        createdAt: getStoreCreatedAt(store),
         image: resolveImageUrl(getImageUrl(store) ?? ''),
       }))
       .filter((item) => Boolean(item.image))
@@ -248,12 +293,25 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
         const keAcbtCount = countTruthy(creatorStores, 'CoKeACBT')
         const traThuongCount = countTruthy(creatorStores, 'TraThuongTB')
         const doiThuKeCount = countTruthy(creatorStores, 'CoHangDoiThuKhong')
+        const keLaysCount = countTruthy(creatorStores, 'DoiThuLays')
+        const keOishiCount = countTruthy(creatorStores, 'DoiThuOishi')
+        const kePocaCount = countTruthy(creatorStores, 'DoiThuPoca')
+        const keKhacCount = countTruthy(creatorStores, 'DoiThuKhac')
         const viAcbtCount = countTruthy(creatorStores, 'CoViACBT')
         const doiThuViCount = countTruthy(creatorStores, 'CoHangDoiThuVi')
+        const viLaysCount = countTruthy(creatorStores, 'ViDoiThuLays')
+        const viOishiCount = countTruthy(creatorStores, 'ViDoiThuOishi')
+        const viPocaCount = countTruthy(creatorStores, 'ViDoiThuPoca')
+        const viKhacCount = countTruthy(creatorStores, 'ViDoiThuKhac')
         const chanGaAcbtCount = countTruthy(creatorStores, 'ChanGaACBT')
         const chanGaDoiThuCount = countTruthy(creatorStores, 'ChanGaDoiThu')
         const bimKhoAcbtCount = countTruthy(creatorStores, 'BimKhoACBT')
+        const bimKhoLaysCount = countTruthy(creatorStores, 'BimKhoDoiThuLays')
+        const bimKhoOishiCount = countTruthy(creatorStores, 'BimKhoDoiThuOishi')
+        const bimKhoPocaCount = countTruthy(creatorStores, 'BimKhoDoiThuPoca')
+        const bimKhoKhacCount = countTruthy(creatorStores, 'BimKhoDoiThuKhac')
         const bimUotAcbtCount = countTruthy(creatorStores, 'BimUotACBT')
+        const bimUotDoiThuCount = countTruthy(creatorStores, 'BimUotDoiThu')
 
         return {
           creator,
@@ -262,16 +320,61 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
           coKeAcbt: `${keAcbtCount} (${formatPercent(keAcbtCount, total)})`,
           traThuongTb: `${traThuongCount} (${formatPercent(traThuongCount, total)})`,
           hangDoiThuKe: `${doiThuKeCount} (${formatPercent(doiThuKeCount, total)})`,
+          keLays: `${keLaysCount} (${formatPercent(keLaysCount, total)})`,
+          keOishi: `${keOishiCount} (${formatPercent(keOishiCount, total)})`,
+          kePoca: `${kePocaCount} (${formatPercent(kePocaCount, total)})`,
+          keKhac: `${keKhacCount} (${formatPercent(keKhacCount, total)})`,
           viAcbt: `${viAcbtCount} (${formatPercent(viAcbtCount, total)})`,
           hangDoiThuVi: `${doiThuViCount} (${formatPercent(doiThuViCount, total)})`,
+          viLays: `${viLaysCount} (${formatPercent(viLaysCount, total)})`,
+          viOishi: `${viOishiCount} (${formatPercent(viOishiCount, total)})`,
+          viPoca: `${viPocaCount} (${formatPercent(viPocaCount, total)})`,
+          viKhac: `${viKhacCount} (${formatPercent(viKhacCount, total)})`,
           chanGaAcbt: `${chanGaAcbtCount} (${formatPercent(chanGaAcbtCount, total)})`,
           chanGaDoiThu: `${chanGaDoiThuCount} (${formatPercent(chanGaDoiThuCount, total)})`,
           bimKhoAcbt: `${bimKhoAcbtCount} (${formatPercent(bimKhoAcbtCount, total)})`,
+          bimKhoLays: `${bimKhoLaysCount} (${formatPercent(bimKhoLaysCount, total)})`,
+          bimKhoOishi: `${bimKhoOishiCount} (${formatPercent(bimKhoOishiCount, total)})`,
+          bimKhoPoca: `${bimKhoPocaCount} (${formatPercent(bimKhoPocaCount, total)})`,
+          bimKhoKhac: `${bimKhoKhacCount} (${formatPercent(bimKhoKhacCount, total)})`,
           bimUotAcbt: `${bimUotAcbtCount} (${formatPercent(bimUotAcbtCount, total)})`,
+          bimUotDoiThu: `${bimUotDoiThuCount} (${formatPercent(bimUotDoiThuCount, total)})`,
         }
       })
       .sort((a, b) => b.total - a.total)
   }, [filteredStores])
+
+  const onTablePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const container = event.currentTarget
+    dragScrollRef.current = {
+      isDragging: true,
+      startX: event.clientX,
+      startScrollLeft: container.scrollLeft,
+    }
+    container.classList.add('is-grabbing')
+    container.setPointerCapture(event.pointerId)
+  }
+
+  const onTablePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const container = event.currentTarget
+
+    if (!dragScrollRef.current.isDragging) {
+      return
+    }
+
+    const delta = event.clientX - dragScrollRef.current.startX
+    container.scrollLeft = dragScrollRef.current.startScrollLeft - delta
+  }
+
+  const onTablePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const container = event.currentTarget
+    dragScrollRef.current.isDragging = false
+    container.classList.remove('is-grabbing')
+
+    if (container.hasPointerCapture(event.pointerId)) {
+      container.releasePointerCapture(event.pointerId)
+    }
+  }
 
   if (!isOpen) {
     return null
@@ -290,7 +393,7 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
           <div>
             <p className="eyebrow">Báo cáo thực địa</p>
             <h2 id="store-report-title">Tổng quan cửa hàng</h2>
-            <p>Dữ liệu cập nhật theo bộ lọc người tạo</p>
+            <p>Dữ liệu hiển thị theo timestamp gốc từ API</p>
           </div>
           <button className="close-button" type="button" onClick={onClose}>
             Đóng
@@ -378,6 +481,7 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
                     <div>
                       <strong>{item.name}</strong>
                       <span>{item.address}</span>
+                      <span>Ngày tạo: {item.createdAt}</span>
                     </div>
                   </article>
                 ))}
@@ -390,22 +494,55 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
             {percentRows.length === 0 ? (
               <p className="report-empty">Chưa có dữ liệu để tính tỷ lệ.</p>
             ) : (
-              <div className="table-wrap">
-                <table className="customer-table report-percent-table">
+              <div
+                className="table-wrap table-wrap--drag"
+                onPointerDown={onTablePointerDown}
+                onPointerMove={onTablePointerMove}
+                onPointerUp={onTablePointerUp}
+                onPointerCancel={onTablePointerUp}
+              >
+                <table className="customer-table report-percent-table report-percent-table--grouped">
                   <thead>
                     <tr>
-                      <th>Người tạo</th>
-                      <th>Tổng CH</th>
-                      <th>Có trên DMS</th>
-                      <th>Có kệ ACBT</th>
+                      <th rowSpan={3}>Người tạo</th>
+                      <th rowSpan={3}>Tổng CH</th>
+                      <th rowSpan={3}>Có trên DMS</th>
+                      <th colSpan={7}>Kệ Trưng Bày</th>
+                      <th colSpan={7}>Vỉ Treo</th>
+                      <th colSpan={9}>Bao Phủ</th>
+                    </tr>
+                    <tr>
+                      <th colSpan={2}>ACBT</th>
+                      <th colSpan={5}>Đối thủ</th>
+                      <th colSpan={2}>ACBT</th>
+                      <th colSpan={5}>Đối thủ</th>
+                      <th colSpan={2}>Chân Gà</th>
+                      <th colSpan={5}>Bim Khô</th>
+                      <th colSpan={2}>Bim Ướt</th>
+                    </tr>
+                    <tr>
+                      <th>Có kệ</th>
                       <th>Trả thưởng TB</th>
-                      <th>Đối thủ kệ</th>
-                      <th>Có vị ACBT</th>
-                      <th>Đối thủ vị</th>
-                      <th>Chân gà ACBT</th>
-                      <th>Chân gà ĐT</th>
-                      <th>Bim khô ACBT</th>
-                      <th>Bim ướt ACBT</th>
+                      <th>Có hàng đối thủ không</th>
+                      <th>Lay&apos;s</th>
+                      <th>Oishi</th>
+                      <th>Poca</th>
+                      <th>Khác</th>
+                      <th>Có vị</th>
+                      <th>Có hàng đối thủ không</th>
+                      <th>Lay&apos;s</th>
+                      <th>Oishi</th>
+                      <th>Poca</th>
+                      <th>Khác</th>
+                      <th>Chân Gà ACBT</th>
+                      <th>Chân Gà Đối Thủ</th>
+                      <th>Bim ACBT</th>
+                      <th>Lay&apos;s</th>
+                      <th>Oishi</th>
+                      <th>Poca</th>
+                      <th>Khác</th>
+                      <th>Bim Ướt ACBT</th>
+                      <th>Bim Ướt Đối Thủ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -417,12 +554,25 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
                         <td>{row.coKeAcbt}</td>
                         <td>{row.traThuongTb}</td>
                         <td>{row.hangDoiThuKe}</td>
+                        <td>{row.keLays}</td>
+                        <td>{row.keOishi}</td>
+                        <td>{row.kePoca}</td>
+                        <td>{row.keKhac}</td>
                         <td>{row.viAcbt}</td>
                         <td>{row.hangDoiThuVi}</td>
+                        <td>{row.viLays}</td>
+                        <td>{row.viOishi}</td>
+                        <td>{row.viPoca}</td>
+                        <td>{row.viKhac}</td>
                         <td>{row.chanGaAcbt}</td>
                         <td>{row.chanGaDoiThu}</td>
                         <td>{row.bimKhoAcbt}</td>
+                        <td>{row.bimKhoLays}</td>
+                        <td>{row.bimKhoOishi}</td>
+                        <td>{row.bimKhoPoca}</td>
+                        <td>{row.bimKhoKhac}</td>
                         <td>{row.bimUotAcbt}</td>
+                        <td>{row.bimUotDoiThu}</td>
                       </tr>
                     ))}
                   </tbody>
