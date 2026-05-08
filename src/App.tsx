@@ -59,13 +59,13 @@ function App() {
     // Simulate login delay
     await new Promise((resolve) => setTimeout(resolve, 800))
 
-    // Simple validation: username and password must be at least 3 characters
-    if (username.length >= 3 && password.length >= 3) {
+    // Check exact credentials
+    if (username === 'ACBT999' && password === '1111') {
       localStorage.setItem('isLoggedIn', 'true')
       localStorage.setItem('username', username)
       setIsLoggedIn(true)
     } else {
-      setError('Tên đăng nhập và mật khẩu phải có ít nhất 3 ký tự')
+      setError('Tên đăng nhập hoặc mật khẩu không chính xác')
     }
 
     setIsAuthLoading(false)
@@ -79,13 +79,15 @@ function App() {
     setCustomers([])
   }
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={handleLogin} isLoading={isAuthLoading} error={error} onErrorClear={() => setError(null)} />
-  }
-
   useEffect(() => {
     void loadCustomers()
   }, [])
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      void loadCustomers()
+    }
+  }, [isLoggedIn])
 
   useEffect(() => {
     if (!notice) {
@@ -192,6 +194,10 @@ function App() {
 
   const openDetail = (customer: Customer) => {
     setSelectedCustomer(customer as CustomerDetail)
+  }
+
+  if (!isLoggedIn) {
+    return <LoginPage onLogin={handleLogin} isLoading={isAuthLoading} error={error} onErrorClear={() => setError(null)} />
   }
 
   if (activePage === 'stores') {

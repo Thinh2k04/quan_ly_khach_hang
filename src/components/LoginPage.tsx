@@ -74,10 +74,6 @@ export default function LoginPage({ onLogin, isLoading = false, error: parentErr
             {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
-
-        <div className="login-footer">
-          <p>Demo: bất kỳ tên đăng nhập và mật khẩu nào (tối thiểu 3 ký tự)</p>
-        </div>
       </div>
     </div>
   )
