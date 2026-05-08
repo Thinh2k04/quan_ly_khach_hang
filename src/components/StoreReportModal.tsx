@@ -68,7 +68,7 @@ function getImageUrl(store: Store): string | null {
   return null
 }
 
-function getStoreDateKey(store: Store): string {
+function getRawDate(store: Store): string | null {
   const rawDate =
     store['ngay_tao'] ??
     store['NgayTao'] ??
@@ -76,45 +76,58 @@ function getStoreDateKey(store: Store): string {
     store['CreatedAt'] ??
     store['ngayTao']
 
-  if (typeof rawDate !== 'string' || !rawDate.trim()) {
+  if (typeof rawDate === 'string' && rawDate.trim()) {
+    return rawDate.trim()
+  }
+
+  return null
+}
+
+function getStoreDateKey(store: Store): string {
+  const rawDate = getRawDate(store)
+  if (!rawDate) {
     return ''
   }
 
-  const value = rawDate.trim()
-  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(value)
-  if (isoMatch) {
-    const [, year, month, day] = isoMatch
-    return `${year}-${month}-${day}`
-  }
-
-  const date = new Date(value)
+  // Parse and convert to VN timezone (UTC+7)
+  const date = new Date(rawDate)
   if (Number.isNaN(date.getTime())) {
     return ''
   }
 
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+  // Convert UTC to VN timezone (UTC+7)
+  const vnDate = new Date(date.getTime() + 7 * 60 * 60 * 1000)
+
+  const year = vnDate.getUTCFullYear()
+  const month = String(vnDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(vnDate.getUTCDate()).padStart(2, '0')
+
   return `${year}-${month}-${day}`
 }
 
 function getStoreCreatedAt(store: Store): string {
-  const rawDate =
-    store['ngay_tao'] ??
-    store['NgayTao'] ??
-    store['created_at'] ??
-    store['CreatedAt'] ??
-    store['ngayTao']
-
-  if (typeof rawDate !== 'string' || !rawDate.trim()) {
+  const rawDate = getRawDate(store)
+  if (!rawDate) {
     return 'Chưa có'
   }
 
-  const value = rawDate.trim()
+  const value = rawDate
   const isoMatch = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(value)
+  
   if (isoMatch) {
-    const [, year, month, day, hour, minute] = isoMatch
-    return `${hour}:${minute} ${Number(day)} thg ${Number(month)}, ${year}`
+    const [, yearStr, monthStr, dayStr, hourStr, minuteStr] = isoMatch
+    
+    // Parse as UTC and convert to VN timezone
+    const date = new Date(`${yearStr}-${monthStr}-${dayStr}T${hourStr}:${minuteStr}:00Z`)
+    const vnDate = new Date(date.getTime() + 7 * 60 * 60 * 1000)
+    
+    const vnYear = vnDate.getUTCFullYear()
+    const vnMonth = vnDate.getUTCMonth() + 1
+    const vnDay = vnDate.getUTCDate()
+    const vnHour = String(vnDate.getUTCHours()).padStart(2, '0')
+    const vnMinute = String(vnDate.getUTCMinutes()).padStart(2, '0')
+    
+    return `${vnHour}:${vnMinute} ${vnDay} thg ${vnMonth}, ${vnYear}`
   }
 
   const date = new Date(value)
@@ -202,6 +215,7 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
   const [creatorFilter, setCreatorFilter] = useState('')
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('day')
   const [dateFilterValue, setDateFilterValue] = useState('')
+  const [dmsFilter, setDmsFilter] = useState<'all' | 'co' | 'chua'>('all')
   const dragScrollRef = useRef({ isDragging: false, startX: 0, startScrollLeft: 0 })
 
   const creatorOptions = useMemo(() => {
@@ -228,9 +242,12 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
         return dateKey.slice(0, 7) === dateFilterValue
       })()
 
-      return matchesCreator && matchesDate
+      const isOnDms = Boolean(store.CoTrenDMS)
+      const matchesDms = dmsFilter === 'all' || (dmsFilter === 'co' && isOnDms) || (dmsFilter === 'chua' && !isOnDms)
+
+      return matchesCreator && matchesDate && matchesDms
     })
-  }, [creatorFilter, dateFilterMode, dateFilterValue, stores])
+  }, [creatorFilter, dateFilterMode, dateFilterValue, dmsFilter, stores])
 
   const byCreator = useMemo(() => {
     const map = new Map<string, number>()
@@ -376,6 +393,139 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
     }
   }
 
+  const exportToCsv = () => {
+    if (percentRows.length === 0) return
+
+    const headers = [
+      'Người tạo',
+      'Tổng CH',
+      'Có trên DMS',
+      'Có kệ',
+      'Trả thưởng TB',
+      'Có hàng đối thủ',
+      "Lay's",
+      'Oishi',
+      'Poca',
+      'Khác',
+      'Có vị',
+      'Có hàng đối thủ (vị)',
+      "Lay's (vị)",
+      'Oishi (vị)',
+      'Poca (vị)',
+      'Khác (vị)',
+      'Chân Gà ACBT',
+      'Chân Gà Đối Thủ',
+      'Snack ACBT',
+      "Lay's (snack)",
+      'Oishi (snack)',
+      'Poca (snack)',
+      'Khác (snack)',
+      'Snack Ướt ACBT',
+      'Snack Ướt Đối Thủ',
+    ]
+
+    const rows = percentRows.map((r) => [
+      r.creator,
+      String(r.total),
+      r.coTrenDms,
+      r.coKeAcbt,
+      r.traThuongTb,
+      r.hangDoiThuKe,
+      r.keLays,
+      r.keOishi,
+      r.kePoca,
+      r.keKhac,
+      r.viAcbt,
+      r.hangDoiThuVi,
+      r.viLays,
+      r.viOishi,
+      r.viPoca,
+      r.viKhac,
+      r.chanGaAcbt,
+      r.chanGaDoiThu,
+      r.bimKhoAcbt,
+      r.bimKhoLays,
+      r.bimKhoOishi,
+      r.bimKhoPoca,
+      r.bimKhoKhac,
+      r.bimUotAcbt,
+      r.bimUotDoiThu,
+    ])
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'store_report.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const exportStoresToCsv = () => {
+    if (filteredStores.length === 0) return
+
+    // Build filter description for filename
+    const filterParts = []
+    if (dmsFilter !== 'all') {
+      filterParts.push(dmsFilter === 'co' ? 'co_dms' : 'chua_dms')
+    }
+    if (creatorFilter) {
+      filterParts.push(`${creatorFilter.replace(/\s+/g, '_')}`)
+    }
+    if (dateFilterValue) {
+      filterParts.push(dateFilterValue)
+    }
+    const filterSuffix = filterParts.length > 0 ? `_${filterParts.join('_')}` : ''
+
+    // Build filter info lines for CSV header
+    const filterLines = [
+      `"Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}"`,
+      `"Người tạo: ${creatorFilter || 'Tất cả'}"`,
+      `"Khoảng thời gian: ${
+        dateFilterValue
+          ? dateFilterMode === 'day'
+            ? `Ngày ${dateFilterValue}`
+            : dateFilterMode === 'week'
+            ? `Tuần ${dateFilterValue}`
+            : `Tháng ${dateFilterValue}`
+          : 'Tất cả'
+      }"`,
+      `"Tổng cửa hàng xuất: ${filteredStores.length}"`,
+      '',
+    ]
+
+    const headers = ['Mã CH', 'Tên CH', 'Người tạo', 'Ngày tạo', 'Có trên DMS']
+
+    const rows = filteredStores.map((store) => {
+      const storeCode = store.MaCH ?? store['ma_ch'] ?? store['MaCH'] ?? ''
+      const storeName = store.TenCH ?? store['ten_ch'] ?? store['TenCH'] ?? ''
+      const creator = getCreatorLabel(store)
+      const createdAt = getStoreCreatedAt(store)
+      const onDms = store.CoTrenDMS ? 'Có' : 'Chưa có'
+
+      return [storeCode, storeName, creator, createdAt, onDms]
+    })
+
+    const headerRow = headers.map((cell) => `"${cell}"`).join(',')
+    const dataRows = rows
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+
+    const csv = [...filterLines, headerRow, dataRows].join('\n')
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `danh_sach_cua_hang${filterSuffix}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (!isOpen) {
     return null
   }
@@ -442,7 +592,29 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
                 value={dateFilterValue}
                 onChange={(event) => setDateFilterValue(event.target.value)}
               />
+
+            <label className="combo-box" htmlFor="store-report-dms">
+              <span>Có trên DMS</span>
+              <select
+                id="store-report-dms"
+                value={dmsFilter}
+                onChange={(event) => setDmsFilter(event.target.value as 'all' | 'co' | 'chua')}
+              >
+                <option value="all">Tất cả</option>
+                <option value="co">Có</option>
+                <option value="chua">Chưa có</option>
+              </select>
             </label>
+            </label>
+          </div>
+
+          <div className="toolbar__actions">
+            <button className="report-button" type="button" onClick={() => exportStoresToCsv()}>
+              Xuất Danh sách CH
+            </button>
+            <button className="report-button" type="button" onClick={() => exportToCsv()}>
+              Xuất Excel
+            </button>
           </div>
         </section>
 
@@ -508,41 +680,41 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
                       <th rowSpan={3}>Tổng CH</th>
                       <th rowSpan={3}>Có trên DMS</th>
                       <th colSpan={7}>Kệ Trưng Bày</th>
-                      <th colSpan={7}>Vỉ Treo</th>
+                      <th colSpan={6}>Vỉ Treo</th>
                       <th colSpan={9}>Bao Phủ</th>
                     </tr>
                     <tr>
+                      <th colSpan={3}>ACBT</th>
+                      <th colSpan={4}>Đối thủ</th>
                       <th colSpan={2}>ACBT</th>
-                      <th colSpan={5}>Đối thủ</th>
-                      <th colSpan={2}>ACBT</th>
-                      <th colSpan={5}>Đối thủ</th>
+                      <th colSpan={4}>Đối thủ</th>
                       <th colSpan={2}>Chân Gà</th>
-                      <th colSpan={5}>Bim Khô</th>
-                      <th colSpan={2}>Bim Ướt</th>
+                      <th colSpan={5}>Snack Khô</th>
+                      <th colSpan={3}>Snack Ướt</th>
                     </tr>
                     <tr>
                       <th>Có kệ</th>
-                      <th>Trả thưởng TB</th>
-                      <th>Có hàng đối thủ không</th>
+                      <th>kệ trả thưởng TB</th>
+                      <th>Có hàng đối thủ</th>
                       <th>Lay&apos;s</th>
                       <th>Oishi</th>
                       <th>Poca</th>
                       <th>Khác</th>
-                      <th>Có vị</th>
-                      <th>Có hàng đối thủ không</th>
+                      <th>Có hàng ACBT</th>
+                      <th>Có hàng đối thủ</th>
                       <th>Lay&apos;s</th>
                       <th>Oishi</th>
                       <th>Poca</th>
                       <th>Khác</th>
                       <th>Chân Gà ACBT</th>
                       <th>Chân Gà Đối Thủ</th>
-                      <th>Bim ACBT</th>
+                      <th>Snack ACBT</th>
                       <th>Lay&apos;s</th>
                       <th>Oishi</th>
                       <th>Poca</th>
                       <th>Khác</th>
-                      <th>Bim Ướt ACBT</th>
-                      <th>Bim Ướt Đối Thủ</th>
+                      <th>Snack Ướt ACBT</th>
+                      <th>Snack Ướt Đối Thủ</th>
                     </tr>
                   </thead>
                   <tbody>

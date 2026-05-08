@@ -137,8 +137,14 @@ function normalizeStore(payload: unknown): Store {
   return {} as Store
 }
 
-export async function getCustomers(): Promise<Customer[]> {
-  const response = await fetch(API_URL)
+export async function getCustomers(forceReload = false): Promise<Customer[]> {
+  const requestUrl = forceReload
+    ? `${API_URL}${API_URL.includes('?') ? '&' : '?'}_ts=${Date.now()}`
+    : API_URL
+
+  const response = await fetch(requestUrl, {
+    cache: 'no-store',
+  })
 
   if (!response.ok) {
     throw new Error(`Không thể tải danh sách khách hàng (${response.status})`)

@@ -9,9 +9,11 @@ import {
   type StorePayload,
 } from '../api'
 import { formatDate, getDateKey, resolveImageUrl } from '../utils/customerFormatters'
+import ConfirmDialog from './ConfirmDialog'
 import StoreReportModal from './StoreReportModal'
 
 type Status = 'idle' | 'loading' | 'ready' | 'error'
+const NOTICE_HIDE_DELAY_MS = 2500
 
 type StoreFieldReportPageProps = {
   onBack: () => void
@@ -318,6 +320,7 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<number | null>(null)
   const [editingStore, setEditingStore] = useState<Store | null>(null)
+  const [storeToDelete, setStoreToDelete] = useState<Store | null>(null)
   const [selectedStore, setSelectedStore] = useState<Store | null>(null)
   const [isReportOpen, setIsReportOpen] = useState(false)
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -340,6 +343,20 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
   useEffect(() => {
     void loadAllStores()
   }, [])
+
+  useEffect(() => {
+    if (!notice) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setNotice(null)
+    }, NOTICE_HIDE_DELAY_MS)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [notice])
 
   const handleSearch = async () => {
     setStatus('loading')
@@ -404,18 +421,25 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
     }
   }
 
-  const handleDelete = async (store: Store) => {
+  const handleDeleteRequest = (store: Store) => {
+    setStoreToDelete(store)
+  }
+
+  const handleDelete = async () => {
+    if (!storeToDelete) {
+      return
+    }
+
+    const store = storeToDelete
     const storeId = getStoreId(store)
 
     if (storeId === null) {
       setError('Không tìm thấy mã cửa hàng để xóa')
+      setStoreToDelete(null)
       return
     }
 
-    const confirmed = window.confirm(`Xóa cửa hàng "${store.TenCH ?? `#${storeId}`}"?`)
-    if (!confirmed) {
-      return
-    }
+    setStoreToDelete(null)
 
     setRemovingId(storeId)
     setError(null)
@@ -664,7 +688,7 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
                           <button
                             className="delete-button"
                             type="button"
-                            onClick={() => void handleDelete(store)}
+                            onClick={() => handleDeleteRequest(store)}
                             disabled={storeId !== null && removingId === storeId}
                           >
                             {storeId !== null && removingId === storeId ? 'Đang xóa...' : 'Xóa'}
@@ -812,6 +836,16 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
       ) : null}
 
       <StoreReportModal stores={filteredStores} isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
+      <ConfirmDialog
+        isOpen={Boolean(storeToDelete)}
+        title="Xác nhận xóa cửa hàng"
+        message={`Bạn có chắc muốn xóa cửa hàng "${storeToDelete?.TenCH ?? 'N/A'}" không?`}
+        confirmText="Xóa"
+        cancelText="Không"
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setStoreToDelete(null)}
+        isLoading={removingId !== null}
+      />
     </div>
   )
 }

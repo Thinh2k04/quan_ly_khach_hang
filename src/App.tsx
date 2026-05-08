@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { deleteCustomer, getCustomers, type Customer } from './api'
 import CustomerDetailModal from './components/CustomerDetailModal'
+import ConfirmDialog from './components/ConfirmDialog'
 import CustomerReportModal from './components/CustomerReportModal'
 import StoreFieldReportPage from './components/StoreFieldReportPage'
 import { CREATOR_NAME_MAP, MAPPED_CREATOR_CODES } from './constants/creatorNames'
-import { formatDate, getDateKey, normalizeSearchText, sameDay } from './utils/customerFormatters'
+import { formatDateToVnTime, getDateKey, normalizeSearchText, sameDay } from './utils/customerFormatters'
 import type { CustomerDetail } from './types/customer'
 
 type Status = 'idle' | 'loading' | 'ready' | 'error'
+const NOTICE_HIDE_DELAY_MS = 2500
 
 function App() {
   const [activePage, setActivePage] = useState<'customers' | 'stores'>('customers')
@@ -21,13 +23,14 @@ function App() {
   const [removingId, setRemovingId] = useState<number | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetail | null>(null)
   const [isReportOpen, setIsReportOpen] = useState(false)
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
 
-  const loadCustomers = async () => {
+  const loadCustomers = async (forceReload = false) => {
     setStatus('loading')
     setError(null)
 
     try {
-      const data = await getCustomers()
+      const data = await getCustomers(forceReload)
       setCustomers(data)
       setStatus('ready')
     } catch (loadError) {
@@ -36,9 +39,31 @@ function App() {
     }
   }
 
+  const handleRefreshCustomers = async () => {
+    setSearch('')
+    setCreatorFilter('')
+    setDateFilter('')
+    setSelectedCustomer(null)
+    await loadCustomers(true)
+  }
+
   useEffect(() => {
     void loadCustomers()
   }, [])
+
+  useEffect(() => {
+    if (!notice) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setNotice(null)
+    }, NOTICE_HIDE_DELAY_MS)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [notice])
 
   const creatorOptions = useMemo(() => {
     const creators = new Set<string>(MAPPED_CREATOR_CODES)
@@ -78,7 +103,7 @@ function App() {
       const searchFields = [
         ...values,
         customer.ngay_tao,
-        formatDate(customer.ngay_tao),
+        formatDateToVnTime(customer.ngay_tao),
         creatorCode,
         creatorFullName,
       ]
@@ -102,12 +127,17 @@ function App() {
     }
   }, [customers])
 
-  const handleDelete = async (customer: Customer) => {
-    const confirmed = window.confirm(`Xóa khách hàng "${customer.ten}"?`)
+  const handleDeleteRequest = (customer: Customer) => {
+    setCustomerToDelete(customer)
+  }
 
-    if (!confirmed) {
+  const handleDelete = async () => {
+    if (!customerToDelete) {
       return
     }
+
+    const customer = customerToDelete
+    setCustomerToDelete(null)
 
     setRemovingId(customer.id)
     setNotice(null)
@@ -214,7 +244,7 @@ function App() {
           <button className="report-button" type="button" onClick={() => setIsReportOpen(true)}>
             Báo cáo
           </button>
-          <button className="refresh-button" type="button" onClick={() => void loadCustomers()}>
+          <button className="refresh-button" type="button" onClick={() => void handleRefreshCustomers()}>
             Làm mới dữ liệu
           </button>
         </div>
@@ -270,7 +300,7 @@ function App() {
                       <td>{customer.loai ?? '—'}</td>
                       <td>{customer.nganh_hang ?? '—'}</td>
                       <td>{customer.npp ?? '—'}</td>
-                      <td>{formatDate(customer.ngay_tao)}</td>
+                      <td>{formatDateToVnTime(customer.ngay_tao)}</td>
                       <td>{customer.nguoi_tao ?? '—'}</td>
                       <td>
                         <div className="action-group">
@@ -284,7 +314,7 @@ function App() {
                           <button
                             className="delete-button"
                             type="button"
-                            onClick={() => void handleDelete(customer)}
+                            onClick={() => handleDeleteRequest(customer)}
                             disabled={removingId === customer.id}
                           >
                             {removingId === customer.id ? 'Đang xóa...' : 'Xóa'}
@@ -308,6 +338,16 @@ function App() {
 
       <CustomerDetailModal customer={selectedCustomer} onClose={() => setSelectedCustomer(null)} />
       <CustomerReportModal customers={filteredCustomers} isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
+      <ConfirmDialog
+        isOpen={Boolean(customerToDelete)}
+        title="Xác nhận xóa khách hàng"
+        message={`Bạn có chắc muốn xóa khách hàng "${customerToDelete?.ten ?? ''}" không?`}
+        confirmText="Xóa"
+        cancelText="Không"
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setCustomerToDelete(null)}
+        isLoading={removingId !== null}
+      />
     </div>
   )
 }

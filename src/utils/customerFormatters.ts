@@ -72,6 +72,23 @@ export function formatDate(value?: string) {
   }).format(date)
 }
 
+export function formatDateToVnTime(value?: string) {
+  if (!value) {
+    return 'Chưa có'
+  }
+
+  const date = parseDateValue(value)
+  if (!date) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: VN_TIME_ZONE,
+  }).format(date)
+}
+
 export function getDateKey(value?: string) {
   if (!value) {
     return ''

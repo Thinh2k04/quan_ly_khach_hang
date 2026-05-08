@@ -1,7 +1,7 @@
 import type { CustomerDetail } from '../types/customer'
 import {
   createInitials,
-  formatDate,
+  formatDateToVnTime,
   formatDetailValue,
   isLinkLikeValue,
   resolveImageUrl,
@@ -72,7 +72,7 @@ export default function CustomerDetailModal({ customer, onClose }: CustomerDetai
               <div className="detail-item" key={key}>
                 <span>{key}</span>
                 {key === 'ngay_tao' ? (
-                  <strong>{formatDate(String(value))}</strong>
+                  <strong>{formatDateToVnTime(String(value))}</strong>
                 ) : isLinkLikeValue(value) ? (
                   <a className="detail-link" href={value} target="_blank" rel="noreferrer">
                     {value}
