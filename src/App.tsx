@@ -3,6 +3,7 @@ import { deleteCustomer, getCustomers, type Customer } from './api'
 import CustomerDetailModal from './components/CustomerDetailModal'
 import ConfirmDialog from './components/ConfirmDialog'
 import CustomerReportModal from './components/CustomerReportModal'
+import LoginPage from './components/LoginPage'
 import StoreFieldReportPage from './components/StoreFieldReportPage'
 import { CREATOR_NAME_MAP, MAPPED_CREATOR_CODES } from './constants/creatorNames'
 import { formatDateToVnTime, getDateKey, normalizeSearchText, sameDay } from './utils/customerFormatters'
@@ -12,6 +13,10 @@ type Status = 'idle' | 'loading' | 'ready' | 'error'
 const NOTICE_HIDE_DELAY_MS = 2500
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('isLoggedIn') === 'true'
+  })
+  const [isAuthLoading, setIsAuthLoading] = useState(false)
   const [activePage, setActivePage] = useState<'customers' | 'stores'>('customers')
   const [customers, setCustomers] = useState<Customer[]>([])
   const [status, setStatus] = useState<Status>('loading')
@@ -45,6 +50,36 @@ function App() {
     setDateFilter('')
     setSelectedCustomer(null)
     await loadCustomers(true)
+  }
+
+  const handleLogin = async (username: string, password: string) => {
+    setIsAuthLoading(true)
+
+    // Simulate login delay
+    await new Promise((resolve) => setTimeout(resolve, 800))
+
+    // Simple validation: username and password must be at least 3 characters
+    if (username.length >= 3 && password.length >= 3) {
+      localStorage.setItem('isLoggedIn', 'true')
+      localStorage.setItem('username', username)
+      setIsLoggedIn(true)
+    } else {
+      setError('Tên đăng nhập và mật khẩu phải có ít nhất 3 ký tự')
+    }
+
+    setIsAuthLoading(false)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn')
+    localStorage.removeItem('username')
+    setIsLoggedIn(false)
+    setActivePage('customers')
+    setCustomers([])
+  }
+
+  if (!isLoggedIn) {
+    return <LoginPage onLogin={handleLogin} isLoading={isAuthLoading} />
   }
 
   useEffect(() => {
@@ -246,6 +281,9 @@ function App() {
           </button>
           <button className="refresh-button" type="button" onClick={() => void handleRefreshCustomers()}>
             Làm mới dữ liệu
+          </button>
+          <button className="logout-button" type="button" onClick={handleLogout}>
+            Đăng xuất
           </button>
         </div>
       </section>
