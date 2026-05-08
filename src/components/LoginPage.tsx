@@ -3,24 +3,29 @@ import { useState } from 'react'
 type LoginPageProps = {
   onLogin: (username: string, password: string) => void
   isLoading?: boolean
+  error?: string | null
+  onErrorClear?: () => void
 }
 
-export default function LoginPage({ onLogin, isLoading = false }: LoginPageProps) {
+export default function LoginPage({ onLogin, isLoading = false, error: parentError = null, onErrorClear }: LoginPageProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  const error = parentError || localError
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setError(null)
+    setLocalError(null)
+    onErrorClear?.()
 
     if (!username.trim()) {
-      setError('Vui lòng nhập tên đăng nhập')
+      setLocalError('Vui lòng nhập tên đăng nhập')
       return
     }
 
     if (!password.trim()) {
-      setError('Vui lòng nhập mật khẩu')
+      setLocalError('Vui lòng nhập mật khẩu')
       return
     }
 

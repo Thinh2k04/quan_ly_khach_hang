@@ -54,6 +54,7 @@ function App() {
 
   const handleLogin = async (username: string, password: string) => {
     setIsAuthLoading(true)
+    setError(null)
 
     // Simulate login delay
     await new Promise((resolve) => setTimeout(resolve, 800))
@@ -79,7 +80,7 @@ function App() {
   }
 
   if (!isLoggedIn) {
-    return <LoginPage onLogin={handleLogin} isLoading={isAuthLoading} />
+    return <LoginPage onLogin={handleLogin} isLoading={isAuthLoading} error={error} onErrorClear={() => setError(null)} />
   }
 
   useEffect(() => {
