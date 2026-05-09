@@ -12,9 +12,55 @@ import type { CustomerDetail } from './types/customer'
 type Status = 'idle' | 'loading' | 'ready' | 'error'
 const NOTICE_HIDE_DELAY_MS = 2500
 
+type UserRole = 'viewer' | 'editor'
+
+type AppUser = {
+  code: string
+  fullName: string
+  role: UserRole
+}
+
+const LOGIN_USERS: Record<string, AppUser> = {
+  ACBT999: { code: 'ACBT999', fullName: 'Quản trị viên', role: 'editor' },
+  ADTHANH: { code: 'ADTHANH', fullName: 'Ngô Ngọc Thành', role: 'viewer' },
+  ADHAI: { code: 'ADHAI', fullName: 'Nguyễn Đình Hải', role: 'viewer' },
+  ADHA: { code: 'ADHA', fullName: 'Nguyễn Đình Hà', role: 'viewer' },
+  ADDUC: { code: 'ADDUC', fullName: 'Nguyễn Anh Đức', role: 'viewer' },
+  ADHUNG: { code: 'ADHUNG', fullName: 'Nguyễn Mạnh Hùng', role: 'viewer' },
+}
+
+function normalizeIdentity(value: string): string {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+}
+
+function matchesLoggedInUser(rawCreator: string | undefined, user: AppUser | null): boolean {
+  if (!user) {
+    return true
+  }
+
+  if (!rawCreator || !rawCreator.trim()) {
+    return false
+  }
+
+  const creator = normalizeIdentity(rawCreator)
+  const userCode = normalizeIdentity(user.code)
+  const userName = normalizeIdentity(user.fullName)
+  const mappedName = CREATOR_NAME_MAP[userCode]
+
+  return (
+    creator === userCode ||
+    creator === userName ||
+    (mappedName ? normalizeIdentity(mappedName) === creator : false)
+  )
+}
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isAuthLoading, setIsAuthLoading] = useState(false)
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null)
   const [activePage, setActivePage] = useState<'customers' | 'stores'>('customers')
   const [customers, setCustomers] = useState<Customer[]>([])
   const [status, setStatus] = useState<Status>('loading')
@@ -58,10 +104,15 @@ function App() {
     await new Promise((resolve) => setTimeout(resolve, 800))
 
     // Accept login by username only (password ignored)
-    if (username?.toUpperCase().trim() === 'ACBT999') {
+    const normalizedUsername = username?.toUpperCase().trim()
+    const account = normalizedUsername ? LOGIN_USERS[normalizedUsername] : undefined
+
+    if (account) {
+      setCurrentUser(account)
+      setCreatorFilter('')
       setIsLoggedIn(true)
     } else {
-      setError('Tên đăng nhập hoặc mật khẩu không chính xác')
+      setError('Tài khoản không hợp lệ')
     }
 
     setIsAuthLoading(false)
@@ -93,7 +144,13 @@ function App() {
     }
   }, [notice])
 
+  const isViewer = currentUser?.role === 'viewer'
+
   const creatorOptions = useMemo(() => {
+    if (isViewer && currentUser?.code) {
+      return [currentUser.code]
+    }
+
     const creators = new Set<string>(MAPPED_CREATOR_CODES)
 
     customers
@@ -102,7 +159,7 @@ function App() {
       .forEach((creatorCode) => creators.add(creatorCode))
 
     return Array.from(creators).sort()
-  }, [customers])
+  }, [currentUser?.code, customers, isViewer])
 
   const filteredCustomers = useMemo(() => {
     const keyword = normalizeSearchText(search)
@@ -112,10 +169,11 @@ function App() {
       const isMappedCreator =
         typeof creatorCode === 'string' &&
         Object.prototype.hasOwnProperty.call(CREATOR_NAME_MAP, creatorCode)
+      const matchesCurrentUser = !isViewer || matchesLoggedInUser(customer.nguoi_tao, currentUser)
       const matchesCreator = !creatorFilter || creatorCode === creatorFilter
       const matchesDate = !dateFilter || getDateKey(customer.ngay_tao) === dateFilter
 
-      if (!matchesCreator || !matchesDate) {
+      if (!matchesCurrentUser || !matchesCreator || !matchesDate) {
         return false
       }
 
@@ -140,7 +198,7 @@ function App() {
         normalizeSearchText(String(field ?? '')).includes(keyword),
       )
     })
-  }, [creatorFilter, customers, dateFilter, search])
+  }, [creatorFilter, currentUser?.code, customers, dateFilter, isViewer, search])
 
   const metrics = useMemo(() => {
     const stores = new Set(customers.map((customer) => customer.npp).filter(Boolean))
@@ -156,6 +214,11 @@ function App() {
   }, [customers])
 
   const handleDeleteRequest = (customer: Customer) => {
+    if (currentUser?.role !== 'editor') {
+      setNotice('Tài khoản này chỉ có quyền xem')
+      return
+    }
+
     setCustomerToDelete(customer)
   }
 
@@ -165,6 +228,11 @@ function App() {
     }
 
     const customer = customerToDelete
+    if (currentUser?.role !== 'editor') {
+      setNotice('Tài khoản này chỉ có quyền xem')
+      return
+    }
+
     setCustomerToDelete(null)
 
     setRemovingId(customer.id)
@@ -190,8 +258,17 @@ function App() {
     return <LoginPage onLogin={handleLogin} isLoading={isAuthLoading} error={error} onErrorClear={() => setError(null)} />
   }
 
+  const canModify = currentUser?.role === 'editor'
+
   if (activePage === 'stores') {
-    return <StoreFieldReportPage onBack={() => setActivePage('customers')} />
+    return (
+      <StoreFieldReportPage
+        onBack={() => setActivePage('customers')}
+        canModify={canModify}
+        currentUserCode={currentUser?.code ?? ''}
+        currentUserName={currentUser?.fullName ?? ''}
+      />
+    )
   }
 
   return (
@@ -247,8 +324,9 @@ function App() {
               id="creator-filter"
               value={creatorFilter}
               onChange={(event) => setCreatorFilter(event.target.value)}
+              disabled={isViewer}
             >
-              <option value="">Tất cả người tạo</option>
+              <option value="">{isViewer ? 'Tài khoản của bạn' : 'Tất cả người tạo'}</option>
               {creatorOptions.map((creatorCode) => (
                 <option key={creatorCode} value={creatorCode}>
                   {creatorCode}
@@ -347,9 +425,10 @@ function App() {
                             className="delete-button"
                             type="button"
                             onClick={() => handleDeleteRequest(customer)}
-                            disabled={removingId === customer.id}
+                            disabled={removingId === customer.id || !canModify}
+                            title={!canModify ? 'Tài khoản chỉ có quyền xem' : undefined}
                           >
-                            {removingId === customer.id ? 'Đang xóa...' : 'Xóa'}
+                            {removingId === customer.id ? 'Đang xóa...' : !canModify ? 'Chỉ xem' : 'Xóa'}
                           </button>
                         </div>
                       </td>

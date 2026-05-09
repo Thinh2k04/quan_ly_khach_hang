@@ -17,6 +17,28 @@ const NOTICE_HIDE_DELAY_MS = 2500
 
 type StoreFieldReportPageProps = {
   onBack: () => void
+  canModify: boolean
+  currentUserCode: string
+  currentUserName: string
+}
+
+function normalizeIdentity(value: string): string {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+}
+
+function matchesLoggedInUser(rawCreator: string | undefined, currentUserCode: string, currentUserName: string): boolean {
+  if (!rawCreator || !rawCreator.trim()) {
+    return false
+  }
+
+  const creator = normalizeIdentity(rawCreator)
+  const code = normalizeIdentity(currentUserCode)
+  const name = normalizeIdentity(currentUserName)
+
+  return creator === code || creator === name
 }
 
 type DateFilterMode = 'day' | 'week' | 'month'
@@ -308,7 +330,12 @@ function getWeekKey(dateKey: string): string {
   return `${tempDate.getFullYear()}-W${String(weekNo).padStart(2, '0')}`
 }
 
-export default function StoreFieldReportPage({ onBack }: StoreFieldReportPageProps) {
+export default function StoreFieldReportPage({
+  onBack,
+  canModify,
+  currentUserCode,
+  currentUserName,
+}: StoreFieldReportPageProps) {
   const [stores, setStores] = useState<Store[]>([])
   const [status, setStatus] = useState<Status>('loading')
   const [error, setError] = useState<string | null>(null)
@@ -390,6 +417,11 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
   
 
   const openEditForm = (store: Store) => {
+    if (!canModify) {
+      setNotice('Tài khoản này chỉ có quyền xem')
+      return
+    }
+
     setEditingStore(store)
     setForm(toPayload(store))
     setIsFormOpen(true)
@@ -397,6 +429,13 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
 
   const submitForm = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    if (!canModify) {
+      setNotice('Tài khoản này chỉ có quyền xem')
+      setIsFormOpen(false)
+      return
+    }
+
     setSaving(true)
     setError(null)
     setNotice(null)
@@ -422,11 +461,22 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
   }
 
   const handleDeleteRequest = (store: Store) => {
+    if (!canModify) {
+      setNotice('Tài khoản này chỉ có quyền xem')
+      return
+    }
+
     setStoreToDelete(store)
   }
 
   const handleDelete = async () => {
     if (!storeToDelete) {
+      return
+    }
+
+    if (!canModify) {
+      setStoreToDelete(null)
+      setNotice('Tài khoản này chỉ có quyền xem')
       return
     }
 
@@ -480,6 +530,11 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
   const filteredStores = useMemo(() => {
     return stores.filter((store) => {
       const matchesCreator = !creatorFilter || getStoreCreatorLabel(store) === creatorFilter
+      const creatorLabel = getStoreCreatorLabel(store)
+      const matchesCurrentUser =
+        canModify ||
+        !currentUserCode ||
+        matchesLoggedInUser(creatorLabel, currentUserCode, currentUserName)
       const dateKey = getStoreDateKey(store)
 
       const matchesDate = !dateFilterValue || (() => {
@@ -498,9 +553,9 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
         return dateKey.slice(0, 7) === dateFilterValue
       })()
 
-      return matchesCreator && matchesDate
+      return matchesCreator && matchesCurrentUser && matchesDate
     })
-  }, [creatorFilter, dateFilterMode, dateFilterValue, stores])
+  }, [canModify, creatorFilter, currentUserCode, currentUserName, dateFilterMode, dateFilterValue, stores])
 
   const metrics = useMemo(() => {
     const npps = new Set(filteredStores.map((store) => store.NPP).filter(Boolean))
@@ -572,8 +627,9 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
               id="store-creator-filter"
               value={creatorFilter}
               onChange={(event) => setCreatorFilter(event.target.value)}
+              disabled={!canModify}
             >
-              <option value="">Tất cả người tạo</option>
+              <option value="">{canModify ? 'Tất cả người tạo' : 'Tài khoản của bạn'}</option>
               {creatorOptions.map((creator) => (
                 <option key={creator} value={creator}>
                   {creator}
@@ -682,16 +738,23 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
                           <button className="detail-button" type="button" onClick={() => void openDetail(store)}>
                             Chi tiết
                           </button>
-                          <button className="detail-button" type="button" onClick={() => openEditForm(store)}>
-                            Sửa
+                          <button
+                            className="detail-button"
+                            type="button"
+                            onClick={() => openEditForm(store)}
+                            disabled={!canModify}
+                            title={!canModify ? 'Tài khoản chỉ có quyền xem' : undefined}
+                          >
+                            {canModify ? 'Sửa' : 'Chỉ xem'}
                           </button>
                           <button
                             className="delete-button"
                             type="button"
                             onClick={() => handleDeleteRequest(store)}
-                            disabled={storeId !== null && removingId === storeId}
+                            disabled={!canModify || (storeId !== null && removingId === storeId)}
+                            title={!canModify ? 'Tài khoản chỉ có quyền xem' : undefined}
                           >
-                            {storeId !== null && removingId === storeId ? 'Đang xóa...' : 'Xóa'}
+                            {storeId !== null && removingId === storeId ? 'Đang xóa...' : !canModify ? 'Chỉ xem' : 'Xóa'}
                           </button>
                         </div>
                       </td>
@@ -790,8 +853,8 @@ export default function StoreFieldReportPage({ onBack }: StoreFieldReportPagePro
                 <button className="report-button" type="button" onClick={() => setIsFormOpen(false)}>
                   Hủy
                 </button>
-                <button className="refresh-button" type="submit" disabled={saving}>
-                  {saving ? 'Đang lưu...' : 'Cập nhật'}
+                <button className="refresh-button" type="submit" disabled={saving || !canModify}>
+                  {saving ? 'Đang lưu...' : !canModify ? 'Chỉ xem' : 'Cập nhật'}
                 </button>
               </div>
             </form>
