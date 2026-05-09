@@ -842,7 +842,7 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
           <section className="report-card report-card--full report-chart-inline">
             <h3>Bảng tỷ lệ thực địa theo người tạo</h3>
             <div style={{ marginTop: 12 }}>
-              <PieChart points={byCreator} />
+              <PieChart points={byCreator} size={220} />
             </div>
             {percentRows.length === 0 ? (
               <p className="report-empty">Chưa có dữ liệu để tính tỷ lệ.</p>
@@ -999,7 +999,7 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
                     { name: 'Đối thủ', values: doi },
                   ]
 
-                  return <GroupedColumnChart categories={categories} series={series} height={220} />
+                  return <GroupedColumnChart categories={categories} series={series} height={180} compact />
                 })()}
               </div>
               <div style={{ marginTop: 12 }}>
@@ -1044,7 +1044,7 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
 
                   return (
                     <div style={{ overflowX: 'auto' }}>
-                      <GroupedColumnChart categories={categories} series={series} height={260} />
+                      <GroupedColumnChart categories={categories} series={series} height={220} compact />
                     </div>
                   )
                 })()}

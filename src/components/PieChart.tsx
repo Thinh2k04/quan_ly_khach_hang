@@ -21,6 +21,7 @@ const DEFAULT_COLORS = [
 
 export default function PieChart({ points, size = 160 }: PieChartProps) {
   const total = points.reduce((s, p) => s + p.value, 0)
+  const visualSize = `min(100%, ${size}px)`
 
   if (!points || points.length === 0 || total === 0) {
     return <div className="pie-chart empty">Chưa có dữ liệu để hiển thị.</div>
@@ -43,7 +44,7 @@ export default function PieChart({ points, size = 160 }: PieChartProps) {
 
   return (
     <div className="pie-chart">
-      <div className="pie-chart__visual" style={{ width: size, height: size, background: bg }} />
+      <div className="pie-chart__visual" style={{ width: visualSize, height: visualSize, background: bg }} />
       <ul className="pie-chart__legend">
         {points.map((p, idx) => (
           <li key={p.label}>
