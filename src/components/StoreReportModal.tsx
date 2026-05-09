@@ -744,7 +744,6 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
           <div>
             <p className="eyebrow">Báo cáo thực địa</p>
             <h2 id="store-report-title">Tổng quan cửa hàng</h2>
-            <p>Dữ liệu hiển thị theo timestamp gốc từ API</p>
           </div>
           <button className="close-button" type="button" onClick={onClose}>
             Đóng
