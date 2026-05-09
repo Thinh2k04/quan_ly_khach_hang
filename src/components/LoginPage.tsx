@@ -45,7 +45,6 @@ export default function LoginPage({ onLogin, isLoading = false, error: parentErr
               autoFocus
               autoComplete="off"
             />
-            <small className="login-hint">Tài khoản xem: ADTHANH, ADHAI, ADHA, ADDUC, ADHUNG. Tài khoản quản trị: ACBT999.</small>
           </label>
 
           {error ? <div className="login-error">{error}</div> : null}
