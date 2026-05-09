@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import type { Store } from '../api'
+import PieChart from './PieChart'
+import GroupedColumnChart from './GroupedColumnChart'
 
 type StoreReportModalProps = {
   stores: Store[]
@@ -202,6 +204,7 @@ function ReportBars({
 
 export default function StoreReportModal({ stores, isOpen, onClose }: StoreReportModalProps) {
   const [creatorFilter, setCreatorFilter] = useState('')
+  const [chartCreatorFilter, setChartCreatorFilter] = useState('')
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('day')
   const [dateFilterValue, setDateFilterValue] = useState('')
   const [dmsFilter, setDmsFilter] = useState<'all' | 'co' | 'chua'>('all')
@@ -337,6 +340,14 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
       .sort((a, b) => b.total - a.total)
   }, [filteredStores])
 
+  const chartRows = useMemo(() => {
+    if (!chartCreatorFilter) {
+      return percentRows
+    }
+
+    return percentRows.filter((row) => row.creator === chartCreatorFilter)
+  }, [chartCreatorFilter, percentRows])
+
   const onTablePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     const container = event.currentTarget
     dragScrollRef.current = {
@@ -369,74 +380,246 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
     }
   }
 
-  const exportToCsv = () => {
+  const exportReportExcel = () => {
     if (percentRows.length === 0) return
 
-    const headers = [
-      'Người tạo',
-      'Tổng CH',
-      'Có trên DMS',
-      'Có kệ',
-      'Trả thưởng TB',
-      'Có hàng đối thủ',
-      "Lay's",
-      'Oishi',
-      'Poca',
-      'Khác',
-      'Có vị',
-      'Có hàng đối thủ (vị)',
-      "Lay's (vị)",
-      'Oishi (vị)',
-      'Poca (vị)',
-      'Khác (vị)',
-      'Chân Gà ACBT',
-      'Chân Gà Đối Thủ',
-      'Snack ACBT',
-      "Lay's (snack)",
-      'Oishi (snack)',
-      'Poca (snack)',
-      'Khác (snack)',
-      'Snack Ướt ACBT',
-      'Snack Ướt Đối Thủ',
+    type MetricKey = keyof Omit<StorePercentRow, 'creator' | 'total'>
+
+    const metricGroups: Array<{ title: string; items: Array<{ key: MetricKey; label: string }> }> = [
+      {
+        title: 'Kệ Trưng Bày',
+        items: [
+          { key: 'coKeAcbt', label: 'Có kệ' },
+          { key: 'traThuongTb', label: 'Trả thưởng TB' },
+          { key: 'hangDoiThuKe', label: 'Có hàng đối thủ' },
+          { key: 'keLays', label: "Lay\'s" },
+          { key: 'keOishi', label: 'Oishi' },
+          { key: 'kePoca', label: 'Poca' },
+          { key: 'keKhac', label: 'Khác' },
+        ],
+      },
+      {
+        title: 'Vỉ Treo',
+        items: [
+          { key: 'viAcbt', label: 'Có vỉ' },
+          { key: 'hangDoiThuVi', label: 'Có hàng đối thủ' },
+          { key: 'viLays', label: "Lay\'s" },
+          { key: 'viOishi', label: 'Oishi' },
+          { key: 'viPoca', label: 'Poca' },
+          { key: 'viKhac', label: 'Khác' },
+        ],
+      },
+      {
+        title: 'Bảo Phủ',
+        items: [
+          { key: 'chanGaAcbt', label: 'Chân Gà ACBT' },
+          { key: 'chanGaDoiThu', label: 'Chân Gà Đối Thủ' },
+          { key: 'bimKhoAcbt', label: 'Bim ACBT' },
+          { key: 'bimKhoLays', label: "Lay\'s" },
+          { key: 'bimKhoOishi', label: 'Oishi' },
+          { key: 'bimKhoPoca', label: 'Poca' },
+          { key: 'bimKhoKhac', label: 'Khác' },
+          { key: 'bimUotAcbt', label: 'Bim Ướt ACBT' },
+          { key: 'bimUotDoiThu', label: 'Bim Ướt Đối Thủ' },
+        ],
+      },
     ]
 
-    const rows = percentRows.map((r) => [
-      r.creator,
-      String(r.total),
-      r.coTrenDms,
-      r.coKeAcbt,
-      r.traThuongTb,
-      r.hangDoiThuKe,
-      r.keLays,
-      r.keOishi,
-      r.kePoca,
-      r.keKhac,
-      r.viAcbt,
-      r.hangDoiThuVi,
-      r.viLays,
-      r.viOishi,
-      r.viPoca,
-      r.viKhac,
-      r.chanGaAcbt,
-      r.chanGaDoiThu,
-      r.bimKhoAcbt,
-      r.bimKhoLays,
-      r.bimKhoOishi,
-      r.bimKhoPoca,
-      r.bimKhoKhac,
-      r.bimUotAcbt,
-      r.bimUotDoiThu,
-    ])
+    const flatMetrics = metricGroups.flatMap((group) => group.items)
+    const totalSurvey = percentRows.reduce((sum, row) => sum + row.total, 0)
 
-    const csv = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
+    function extractCount(text: string): number {
+      const match = /^\s*(\d+)\b/.exec(String(text))
+      return match ? Number(match[1]) : 0
+    }
 
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    function extractPercent(text: string): string {
+      const match = /\((\d+%)\)/.exec(String(text))
+      return match ? match[1] : '0%'
+    }
+
+    function renderCell(value: string | number, className = '') {
+      return `<td class="${className}">${value}</td>`
+    }
+
+    const headerTop = `
+      <tr>
+        <th rowspan="3" class="sticky-col">Tên người thực hiện</th>
+        <th rowspan="3">Tổng số CH<br/>Khảo sát</th>
+        <th rowspan="3">Có trên<br/>DMS</th>
+        <th colspan="7">Kệ Trưng Bày</th>
+        <th colspan="6">Vỉ Treo</th>
+        <th colspan="9">Bảo Phủ</th>
+      </tr>`
+
+    const headerMid = `
+      <tr>
+        <th colspan="3">ACBT</th>
+        <th colspan="4">Đối thủ</th>
+        <th colspan="2">ACBT</th>
+        <th colspan="4">Đối thủ</th>
+        <th colspan="2">Chân Gà</th>
+        <th colspan="5">Bim Khô</th>
+        <th colspan="2">Bim Ướt</th>
+      </tr>`
+
+    const headerBottom = `
+      <tr>
+        ${flatMetrics
+          .map((metric) => `<th>${metric.label}</th>`)
+          .join('')}
+      </tr>`
+
+    const bodyRows = percentRows
+      .map((row) => {
+        const countCells = flatMetrics.map((metric) => renderCell(extractCount(String(row[metric.key])))).join('')
+        const percentCells = flatMetrics.map((metric) => renderCell(extractPercent(String(row[metric.key])))).join('')
+
+        const surveyCell = `<td class="survey-cell" rowspan="2">${row.total}</td>`
+        const creatorCell = `<td class="creator-cell" rowspan="2">${row.creator}</td>`
+
+        return `
+          <tr class="count-row">
+            ${creatorCell}
+            ${surveyCell}
+            ${renderCell(extractCount(String(row.coTrenDms)), 'count-primary')}
+            ${countCells}
+          </tr>
+          <tr class="percent-row">
+            ${renderCell(extractPercent(String(row.coTrenDms)), 'percent-primary')}
+            ${percentCells}
+          </tr>`
+      })
+      .join('')
+
+    const totalMetrics = {
+      coTrenDms: 0,
+      coKeAcbt: 0,
+      traThuongTb: 0,
+      hangDoiThuKe: 0,
+      keLays: 0,
+      keOishi: 0,
+      kePoca: 0,
+      keKhac: 0,
+      viAcbt: 0,
+      hangDoiThuVi: 0,
+      viLays: 0,
+      viOishi: 0,
+      viPoca: 0,
+      viKhac: 0,
+      chanGaAcbt: 0,
+      chanGaDoiThu: 0,
+      bimKhoAcbt: 0,
+      bimKhoLays: 0,
+      bimKhoOishi: 0,
+      bimKhoPoca: 0,
+      bimKhoKhac: 0,
+      bimUotAcbt: 0,
+      bimUotDoiThu: 0,
+    }
+
+    percentRows.forEach((row) => {
+      totalMetrics.coTrenDms += extractCount(row.coTrenDms)
+      totalMetrics.coKeAcbt += extractCount(row.coKeAcbt)
+      totalMetrics.traThuongTb += extractCount(row.traThuongTb)
+      totalMetrics.hangDoiThuKe += extractCount(row.hangDoiThuKe)
+      totalMetrics.keLays += extractCount(row.keLays)
+      totalMetrics.keOishi += extractCount(row.keOishi)
+      totalMetrics.kePoca += extractCount(row.kePoca)
+      totalMetrics.keKhac += extractCount(row.keKhac)
+      totalMetrics.viAcbt += extractCount(row.viAcbt)
+      totalMetrics.hangDoiThuVi += extractCount(row.hangDoiThuVi)
+      totalMetrics.viLays += extractCount(row.viLays)
+      totalMetrics.viOishi += extractCount(row.viOishi)
+      totalMetrics.viPoca += extractCount(row.viPoca)
+      totalMetrics.viKhac += extractCount(row.viKhac)
+      totalMetrics.chanGaAcbt += extractCount(row.chanGaAcbt)
+      totalMetrics.chanGaDoiThu += extractCount(row.chanGaDoiThu)
+      totalMetrics.bimKhoAcbt += extractCount(row.bimKhoAcbt)
+      totalMetrics.bimKhoLays += extractCount(row.bimKhoLays)
+      totalMetrics.bimKhoOishi += extractCount(row.bimKhoOishi)
+      totalMetrics.bimKhoPoca += extractCount(row.bimKhoPoca)
+      totalMetrics.bimKhoKhac += extractCount(row.bimKhoKhac)
+      totalMetrics.bimUotAcbt += extractCount(row.bimUotAcbt)
+      totalMetrics.bimUotDoiThu += extractCount(row.bimUotDoiThu)
+    })
+
+    const totalPercent = (value: number) => (totalSurvey ? `${Math.round((value / totalSurvey) * 100)}%` : '0%')
+
+    const totalRowCounts = `
+      <tr class="total-row count-row">
+        <td class="creator-cell total-label">Tổng</td>
+        <td class="survey-cell total-value">${totalSurvey}</td>
+        <td class="count-primary total-value">${totalMetrics.coTrenDms}</td>
+        ${flatMetrics.map((metric) => renderCell(totalMetrics[metric.key], 'total-value')).join('')}
+      </tr>`
+
+    const totalRowPercents = `
+      <tr class="total-row percent-row">
+        <td class="creator-cell total-label"></td>
+        <td class="survey-cell total-value"></td>
+        <td class="percent-primary total-value">${totalPercent(totalMetrics.coTrenDms)}</td>
+        ${flatMetrics.map((metric) => renderCell(totalPercent(totalMetrics[metric.key]), 'total-value')).join('')}
+      </tr>`
+
+    const filterSummary = `
+      <tr><td colspan="25" class="meta-row">Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}</td></tr>
+      <tr><td colspan="25" class="meta-row">Người tạo: ${chartCreatorFilter || creatorFilter || 'Tất cả'}</td></tr>
+      <tr><td colspan="25" class="meta-row">Khoảng thời gian: ${
+        dateFilterValue
+          ? dateFilterMode === 'day'
+            ? `Ngày ${dateFilterValue}`
+            : dateFilterMode === 'week'
+              ? `Tuần ${dateFilterValue}`
+              : `Tháng ${dateFilterValue}`
+          : 'Tất cả'
+      }</td></tr>`
+
+    const html = `<!doctype html>
+    <html>
+      <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <style>
+          @page { size: landscape; margin: 12mm; }
+          body { font-family: Calibri, Arial, sans-serif; background: #fff; color: #111827; }
+          table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+          th, td { border: 1px solid #0f172a; text-align: center; vertical-align: middle; padding: 4px 6px; word-wrap: break-word; }
+          th { background: #0b6fb7; color: #fff; font-weight: 700; }
+          .meta-row { text-align: left; font-size: 12px; background: #f8fafc; font-style: italic; }
+          .creator-cell { text-align: left; font-weight: 700; }
+          .sticky-col { min-width: 160px; }
+          .survey-cell { min-width: 90px; }
+          .count-primary { font-weight: 700; }
+          .percent-primary { color: #2563eb; }
+          .count-row td { height: 28px; }
+          .percent-row td { height: 26px; font-size: 12px; color: #0f172a; }
+          .total-row td { font-weight: 700; color: #dc2626; }
+          .total-label { text-align: left; }
+          .total-value { color: #dc2626; }
+          .sheet-title { text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+          .sheet-subtitle { text-align: center; font-size: 12px; margin-bottom: 10px; color: #475569; }
+        </style>
+      </head>
+      <body>
+        <div class="sheet-title">BÁO CÁO THỰC ĐỊA</div>
+        <div class="sheet-subtitle">Xuất dữ liệu theo bảng báo cáo thực địa</div>
+        <table>
+          ${filterSummary}
+          ${headerTop}
+          ${headerMid}
+          ${headerBottom}
+          ${bodyRows}
+          ${totalRowCounts}
+          ${totalRowPercents}
+        </table>
+      </body>
+    </html>`
+
+    const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'store_report.csv'
+    a.download = `bao_cao_thuc_dia_${Date.now()}.xls`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -444,60 +627,102 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
   const exportStoresToCsv = () => {
     if (filteredStores.length === 0) return
 
-    // Build filter description for filename
-    const filterParts = []
-    if (dmsFilter !== 'all') {
-      filterParts.push(dmsFilter === 'co' ? 'co_dms' : 'chua_dms')
-    }
-    if (creatorFilter) {
-      filterParts.push(`${creatorFilter.replace(/\s+/g, '_')}`)
-    }
-    if (dateFilterValue) {
-      filterParts.push(dateFilterValue)
-    }
-    const filterSuffix = filterParts.length > 0 ? `_${filterParts.join('_')}` : ''
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
 
-    // Build filter info lines for CSV header
-    const filterLines = [
-      `"Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}"`,
-      `"Người tạo: ${creatorFilter || 'Tất cả'}"`,
-      `"Khoảng thời gian: ${
+    const filterSummary = [
+      `Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}`,
+      `Người tạo: ${creatorFilter || 'Tất cả'}`,
+      `Khoảng thời gian: ${
         dateFilterValue
           ? dateFilterMode === 'day'
             ? `Ngày ${dateFilterValue}`
             : dateFilterMode === 'week'
-            ? `Tuần ${dateFilterValue}`
-            : `Tháng ${dateFilterValue}`
+              ? `Tuần ${dateFilterValue}`
+              : `Tháng ${dateFilterValue}`
           : 'Tất cả'
-      }"`,
-      `"Tổng cửa hàng xuất: ${filteredStores.length}"`,
-      '',
+      }`,
+      `Tổng cửa hàng xuất: ${filteredStores.length}`,
     ]
 
-    const headers = ['Mã CH', 'Tên CH', 'Người tạo', 'Ngày tạo', 'Có trên DMS']
-
-    const rows = filteredStores.map((store) => {
+    const rows = filteredStores.map((store, index) => {
       const storeCode = store.MaCH ?? store['ma_ch'] ?? store['MaCH'] ?? ''
       const storeName = store.TenCH ?? store['ten_ch'] ?? store['TenCH'] ?? ''
       const creator = getCreatorLabel(store)
       const createdAt = getStoreCreatedAt(store)
       const onDms = store.CoTrenDMS ? 'Có' : 'Chưa có'
 
-      return [storeCode, storeName, creator, createdAt, onDms]
+      return `
+        <tr class="${index % 2 === 0 ? 'even-row' : 'odd-row'}">
+          <td class="code-cell">${escapeHtml(String(storeCode))}</td>
+          <td class="name-cell">${escapeHtml(String(storeName))}</td>
+          <td class="creator-cell">${escapeHtml(String(creator))}</td>
+          <td class="date-cell">${escapeHtml(String(createdAt))}</td>
+          <td class="dms-cell ${store.CoTrenDMS ? 'yes' : 'no'}">${onDms}</td>
+        </tr>`
     })
 
-    const headerRow = headers.map((cell) => `"${cell}"`).join(',')
-    const dataRows = rows
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
+    const html = `<!doctype html>
+    <html>
+      <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <style>
+          @page { size: landscape; margin: 12mm; }
+          body { font-family: Calibri, Arial, sans-serif; background: #ffffff; color: #111827; }
+          .sheet-title { font-size: 20px; font-weight: 700; text-align: center; color: #0f172a; margin: 0 0 4px; }
+          .sheet-subtitle { font-size: 12px; text-align: center; color: #64748b; margin: 0 0 12px; }
+          .meta { display: grid; grid-template-columns: 1fr; gap: 4px; margin: 0 0 12px; }
+          .meta-item { font-size: 12px; color: #334155; padding: 4px 8px; background: #f8fafc; border: 1px solid #cbd5e1; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          th, td { border: 1px solid #1e3a5f; padding: 6px 8px; font-size: 12px; }
+          th { background: #0b6fb7; color: #fff; font-weight: 700; text-align: center; }
+          td { background: #fff; }
+          .even-row td { background: #f8fbff; }
+          .odd-row td { background: #ffffff; }
+          .code-cell { width: 90px; text-align: center; }
+          .name-cell { width: 240px; text-align: left; }
+          .creator-cell { width: 160px; text-align: left; }
+          .date-cell { width: 160px; text-align: center; }
+          .dms-cell { width: 100px; text-align: center; font-weight: 700; }
+          .dms-cell.yes { color: #0f766e; }
+          .dms-cell.no { color: #b91c1c; }
+          .table-title { margin: 14px 0 6px; font-size: 14px; font-weight: 700; color: #0f172a; }
+        </style>
+      </head>
+      <body>
+        <div class="sheet-title">DANH SÁCH CỬA HÀNG</div>
+        <div class="sheet-subtitle">Xuất dữ liệu CH theo bộ lọc hiện tại</div>
+        <div class="meta">
+          ${filterSummary.map((item) => `<div class="meta-item">${escapeHtml(item)}</div>`).join('')}
+        </div>
+        <div class="table-title">Bảng dữ liệu cửa hàng</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Mã CH</th>
+              <th>Tên CH</th>
+              <th>Người tạo</th>
+              <th>Ngày tạo</th>
+              <th>Có trên DMS</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.join('')}
+          </tbody>
+        </table>
+      </body>
+    </html>`
 
-    const csv = [...filterLines, headerRow, dataRows].join('\n')
-
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `danh_sach_cua_hang${filterSuffix}.csv`
+    a.download = `danh_sach_cua_hang_${Date.now()}.xls`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -581,6 +806,7 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
                 <option value="chua">Chưa có</option>
               </select>
             </label>
+
             </label>
           </div>
 
@@ -588,7 +814,7 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
             <button className="report-button" type="button" onClick={() => exportStoresToCsv()}>
               Xuất Danh sách CH
             </button>
-            <button className="report-button" type="button" onClick={() => exportToCsv()}>
+            <button className="report-button" type="button" onClick={() => exportReportExcel()}>
               Xuất Excel
             </button>
           </div>
@@ -613,8 +839,11 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
           <ReportBars title="Theo người tạo" items={byCreator} barClassName="report-bar report-bar--creator" />
           <ReportBars title="Theo tỉnh/thành" items={byProvince} barClassName="report-bar report-bar--day" />
 
-          <section className="report-card report-card--full">
+          <section className="report-card report-card--full report-chart-inline">
             <h3>Bảng tỷ lệ thực địa theo người tạo</h3>
+            <div style={{ marginTop: 12 }}>
+              <PieChart points={byCreator} />
+            </div>
             {percentRows.length === 0 ? (
               <p className="report-empty">Chưa có dữ liệu để tính tỷ lệ.</p>
             ) : (
@@ -703,6 +932,124 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
                 </table>
               </div>
             )}
+
+            <div style={{ marginTop: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
+                <label className="combo-box" htmlFor="store-report-chart-creator" style={{ minWidth: 240 }}>
+                  <span>Chọn người xem biểu đồ</span>
+                  <select
+                    id="store-report-chart-creator"
+                    value={chartCreatorFilter}
+                    onChange={(event) => setChartCreatorFilter(event.target.value)}
+                  >
+                    <option value="">Tất cả người tạo</option>
+                    {creatorOptions.map((creator) => (
+                      <option key={creator} value={creator}>
+                        {creator}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <h4 style={{ margin: '0 0 8px 0' }}>Biểu đồ cột — tất cả trường dữ liệu</h4>
+              <div style={{ marginTop: 8 }}>
+                {/* Build grouped series: ACBT vs Đối thủ totals per creator */}
+                {(() => {
+                  const categories = chartRows.map((r) => r.creator)
+                  function leadNum(text: string | number) {
+                    const m = /^\s*(\d+)\b/.exec(String(text))
+                    return m ? Number(m[1]) : 0
+                  }
+
+                  const acbt = chartRows.map((r) => {
+                    return (
+                      leadNum(r.coKeAcbt) +
+                      leadNum(r.viAcbt) +
+                      leadNum(r.bimKhoAcbt) +
+                      leadNum(r.bimUotAcbt) +
+                      leadNum(r.traThuongTb) +
+                      leadNum(r.chanGaAcbt)
+                    )
+                  })
+
+                  const doi = chartRows.map((r) => {
+                    return (
+                      leadNum(r.hangDoiThuKe) +
+                      leadNum(r.keLays) +
+                      leadNum(r.keOishi) +
+                      leadNum(r.kePoca) +
+                      leadNum(r.keKhac) +
+                      leadNum(r.hangDoiThuVi) +
+                      leadNum(r.viLays) +
+                      leadNum(r.viOishi) +
+                      leadNum(r.viPoca) +
+                      leadNum(r.viKhac) +
+                      leadNum(r.bimKhoLays) +
+                      leadNum(r.bimKhoOishi) +
+                      leadNum(r.bimKhoPoca) +
+                      leadNum(r.bimKhoKhac) +
+                      leadNum(r.bimUotDoiThu) +
+                      leadNum(r.chanGaDoiThu)
+                    )
+                  })
+
+                  const series = [
+                    { name: 'ACBT', values: acbt },
+                    { name: 'Đối thủ', values: doi },
+                  ]
+
+                  return <GroupedColumnChart categories={categories} series={series} height={220} />
+                })()}
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <h4 style={{ margin: '0 0 8px 0' }}>Biểu đồ cột — theo từng trường</h4>
+                {(() => {
+                  const categories = chartRows.map((r) => r.creator)
+                  function leadNum(text: string | number) {
+                    const m = /^\s*(\d+)\b/.exec(String(text))
+                    return m ? Number(m[1]) : 0
+                  }
+
+                  const metrics: { key: keyof StorePercentRow; label: string }[] = [
+                    { key: 'coTrenDms', label: 'DMS' },
+                    { key: 'coKeAcbt', label: 'Kệ ACBT' },
+                    { key: 'traThuongTb', label: 'Kệ TT' },
+                    { key: 'hangDoiThuKe', label: 'Kệ ĐT' },
+                    { key: 'keLays', label: "Lay's kệ" },
+                    { key: 'keOishi', label: 'Oishi kệ' },
+                    { key: 'kePoca', label: 'Poca kệ' },
+                    { key: 'keKhac', label: 'Khác kệ' },
+                    { key: 'viAcbt', label: 'Vỉ ACBT' },
+                    { key: 'hangDoiThuVi', label: 'Vỉ ĐT' },
+                    { key: 'viLays', label: "Lay's vỉ" },
+                    { key: 'viOishi', label: 'Oishi vỉ' },
+                    { key: 'viPoca', label: 'Poca vỉ' },
+                    { key: 'viKhac', label: 'Khác vỉ' },
+                    { key: 'chanGaAcbt', label: 'Gà ACBT' },
+                    { key: 'chanGaDoiThu', label: 'Gà ĐT' },
+                    { key: 'bimKhoAcbt', label: 'Snack ACBT' },
+                    { key: 'bimKhoLays', label: "Lay's snack" },
+                    { key: 'bimKhoOishi', label: 'Oishi snack' },
+                    { key: 'bimKhoPoca', label: 'Poca snack' },
+                    { key: 'bimKhoKhac', label: 'Khác snack' },
+                    { key: 'bimUotAcbt', label: 'Ướt ACBT' },
+                    { key: 'bimUotDoiThu', label: 'Ướt ĐT' },
+                  ]
+
+                  const series = metrics.map((m) => ({
+                    name: m.label,
+                    values: chartRows.map((r) => leadNum(r[m.key])),
+                  }))
+
+                  return (
+                    <div style={{ overflowX: 'auto' }}>
+                      <GroupedColumnChart categories={categories} series={series} height={260} />
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
           </section>
         </div>
       </div>

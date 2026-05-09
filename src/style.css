@@ -605,6 +605,102 @@
     font-size: 1rem;
   }
 
+  /* Pie chart */
+  .pie-chart {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .pie-chart__visual {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    box-shadow: 0 8px 20px rgba(2,6,23,0.06);
+  }
+
+  .pie-chart__legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 420px;
+  }
+
+  .pie-chart__legend li {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .pie-chart__swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  .pie-chart__label {
+    color: #475569;
+    font-size: 0.95rem;
+    flex: 1;
+  }
+
+  .pie-chart__value {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  /* Table percent column chart */
+  .table-percent-chart {
+    padding: 12px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.08);
+  }
+
+  .table-percent-chart__wrap {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    overflow: auto;
+    padding: 8px;
+  }
+
+  .table-percent-chart__col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 84px;
+  }
+
+  .table-percent-chart__bar {
+    width: 36px;
+    background: linear-gradient(180deg, #60a5fa, #0369a1);
+    border-radius: 6px 6px 0 0;
+    transition: transform 0.12s ease;
+  }
+
+  .table-percent-chart__label {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #475569;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .table-percent-chart__value {
+    margin-top: 4px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
   .report-chart-list {
     display: grid;
     gap: 10px;

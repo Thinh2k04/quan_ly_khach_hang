@@ -50,15 +50,15 @@ function App() {
     await loadCustomers(true)
   }
 
-  const handleLogin = async (username: string, password: string) => {
+  const handleLogin = async (username: string, _password: string) => {
     setIsAuthLoading(true)
     setError(null)
 
     // Simulate login delay
     await new Promise((resolve) => setTimeout(resolve, 800))
 
-    // Check exact credentials
-    if (username === 'ACBT999' && password === '1111') {
+    // Accept login by username only (password ignored)
+    if (username?.toUpperCase().trim() === 'ACBT999') {
       setIsLoggedIn(true)
     } else {
       setError('Tên đăng nhập hoặc mật khẩu không chính xác')

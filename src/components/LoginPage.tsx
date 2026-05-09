@@ -8,8 +8,7 @@ type LoginPageProps = {
 }
 
 export default function LoginPage({ onLogin, isLoading = false, error: parentError = null, onErrorClear }: LoginPageProps) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('ACBT999')
   const [localError, setLocalError] = useState<string | null>(null)
 
   const error = parentError || localError
@@ -23,13 +22,7 @@ export default function LoginPage({ onLogin, isLoading = false, error: parentErr
       setLocalError('Vui lòng nhập tên đăng nhập')
       return
     }
-
-    if (!password.trim()) {
-      setLocalError('Vui lòng nhập mật khẩu')
-      return
-    }
-
-    onLogin(username, password)
+    onLogin(username, '')
   }
 
   return (
@@ -44,24 +37,12 @@ export default function LoginPage({ onLogin, isLoading = false, error: parentErr
           <label className="login-field">
             <span>Tên đăng nhập</span>
             <input
-              type="text"
+              type="password"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => setUsername(e.target.value.toUpperCase())}
               placeholder="Nhập tên đăng nhập"
               disabled={isLoading}
               autoFocus
-              autoComplete="off"
-            />
-          </label>
-
-          <label className="login-field">
-            <span>Mật khẩu</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Nhập mật khẩu"
-              disabled={isLoading}
               autoComplete="off"
             />
           </label>
