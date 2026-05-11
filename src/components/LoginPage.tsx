@@ -8,7 +8,7 @@ type LoginPageProps = {
 }
 
 export default function LoginPage({ onLogin, isLoading = false, error: parentError = null, onErrorClear }: LoginPageProps) {
-  const [username, setUsername] = useState('ACBT999')
+  const [username, setUsername] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
 
   const error = parentError || localError
@@ -37,7 +37,7 @@ export default function LoginPage({ onLogin, isLoading = false, error: parentErr
           <label className="login-field">
             <span>Tên đăng nhập</span>
             <input
-              type="password"
+              type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value.toUpperCase())}
               placeholder="Nhập tên đăng nhập"
