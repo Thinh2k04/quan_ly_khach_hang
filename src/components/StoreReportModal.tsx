@@ -26,12 +26,14 @@ type StorePercentRow = {
   hangDoiThuKe: string
   keLays: string
   keOishi: string
+  keOrion: string
   kePoca: string
   keKhac: string
   viAcbt: string
   hangDoiThuVi: string
   viLays: string
   viOishi: string
+  viOrion: string
   viPoca: string
   viKhac: string
   chanGaAcbt: string
@@ -39,6 +41,7 @@ type StorePercentRow = {
   bimKhoAcbt: string
   bimKhoLays: string
   bimKhoOishi: string
+  bimKhoOrion: string
   bimKhoPoca: string
   bimKhoKhac: string
   bimUotAcbt: string
@@ -292,12 +295,14 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
         const doiThuKeCount = countTruthy(creatorStores, 'CoHangDoiThuKhong')
         const keLaysCount = countTruthy(creatorStores, 'DoiThuLays')
         const keOishiCount = countTruthy(creatorStores, 'DoiThuOishi')
+        const keOrionCount = countTruthy(creatorStores, 'DoiThuOrion')
         const kePocaCount = countTruthy(creatorStores, 'DoiThuPoca')
         const keKhacCount = countTruthy(creatorStores, 'DoiThuKhac')
         const viAcbtCount = countTruthy(creatorStores, 'CoViACBT')
         const doiThuViCount = countTruthy(creatorStores, 'CoHangDoiThuVi')
         const viLaysCount = countTruthy(creatorStores, 'ViDoiThuLays')
         const viOishiCount = countTruthy(creatorStores, 'ViDoiThuOishi')
+        const viOrionCount = countTruthy(creatorStores, 'ViDoiThuOrion')
         const viPocaCount = countTruthy(creatorStores, 'ViDoiThuPoca')
         const viKhacCount = countTruthy(creatorStores, 'ViDoiThuKhac')
         const chanGaAcbtCount = countTruthy(creatorStores, 'ChanGaACBT')
@@ -305,6 +310,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
         const bimKhoAcbtCount = countTruthy(creatorStores, 'BimKhoACBT')
         const bimKhoLaysCount = countTruthy(creatorStores, 'BimKhoDoiThuLays')
         const bimKhoOishiCount = countTruthy(creatorStores, 'BimKhoDoiThuOishi')
+        const bimKhoOrionCount = countTruthy(creatorStores, 'BimKhoDoiThuOrion')
         const bimKhoPocaCount = countTruthy(creatorStores, 'BimKhoDoiThuPoca')
         const bimKhoKhacCount = countTruthy(creatorStores, 'BimKhoDoiThuKhac')
         const bimUotAcbtCount = countTruthy(creatorStores, 'BimUotACBT')
@@ -319,12 +325,14 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
           hangDoiThuKe: `${doiThuKeCount} (${formatPercent(doiThuKeCount, total)})`,
           keLays: `${keLaysCount} (${formatPercent(keLaysCount, total)})`,
           keOishi: `${keOishiCount} (${formatPercent(keOishiCount, total)})`,
+          keOrion: `${keOrionCount} (${formatPercent(keOrionCount, total)})`,
           kePoca: `${kePocaCount} (${formatPercent(kePocaCount, total)})`,
           keKhac: `${keKhacCount} (${formatPercent(keKhacCount, total)})`,
           viAcbt: `${viAcbtCount} (${formatPercent(viAcbtCount, total)})`,
           hangDoiThuVi: `${doiThuViCount} (${formatPercent(doiThuViCount, total)})`,
           viLays: `${viLaysCount} (${formatPercent(viLaysCount, total)})`,
           viOishi: `${viOishiCount} (${formatPercent(viOishiCount, total)})`,
+          viOrion: `${viOrionCount} (${formatPercent(viOrionCount, total)})`,
           viPoca: `${viPocaCount} (${formatPercent(viPocaCount, total)})`,
           viKhac: `${viKhacCount} (${formatPercent(viKhacCount, total)})`,
           chanGaAcbt: `${chanGaAcbtCount} (${formatPercent(chanGaAcbtCount, total)})`,
@@ -332,6 +340,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
           bimKhoAcbt: `${bimKhoAcbtCount} (${formatPercent(bimKhoAcbtCount, total)})`,
           bimKhoLays: `${bimKhoLaysCount} (${formatPercent(bimKhoLaysCount, total)})`,
           bimKhoOishi: `${bimKhoOishiCount} (${formatPercent(bimKhoOishiCount, total)})`,
+          bimKhoOrion: `${bimKhoOrionCount} (${formatPercent(bimKhoOrionCount, total)})`,
           bimKhoPoca: `${bimKhoPocaCount} (${formatPercent(bimKhoPocaCount, total)})`,
           bimKhoKhac: `${bimKhoKhacCount} (${formatPercent(bimKhoKhacCount, total)})`,
           bimUotAcbt: `${bimUotAcbtCount} (${formatPercent(bimUotAcbtCount, total)})`,
@@ -395,6 +404,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
           { key: 'hangDoiThuKe', label: 'Có hàng đối thủ' },
           { key: 'keLays', label: "Lay\'s" },
           { key: 'keOishi', label: 'Oishi' },
+          { key: 'keOrion', label: 'Kệ đối thủ Orion' },
           { key: 'kePoca', label: 'Poca' },
           { key: 'keKhac', label: 'Khác' },
         ],
@@ -406,6 +416,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
           { key: 'hangDoiThuVi', label: 'Có hàng đối thủ' },
           { key: 'viLays', label: "Lay\'s" },
           { key: 'viOishi', label: 'Oishi' },
+          { key: 'viOrion', label: 'Vỉ đối thủ Orion' },
           { key: 'viPoca', label: 'Poca' },
           { key: 'viKhac', label: 'Khác' },
         ],
@@ -418,6 +429,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
           { key: 'bimKhoAcbt', label: 'Bim ACBT' },
           { key: 'bimKhoLays', label: "Lay\'s" },
           { key: 'bimKhoOishi', label: 'Oishi' },
+          { key: 'bimKhoOrion', label: 'Snack khô đối thủ' },
           { key: 'bimKhoPoca', label: 'Poca' },
           { key: 'bimKhoKhac', label: 'Khác' },
           { key: 'bimUotAcbt', label: 'Bim Ướt ACBT' },
@@ -448,19 +460,19 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
         <th rowspan="3" class="sticky-col">Tên người thực hiện</th>
         <th rowspan="3">Tổng số CH<br/>Khảo sát</th>
         <th rowspan="3">Có trên<br/>DMS</th>
-        <th colspan="7">Kệ Trưng Bày</th>
-        <th colspan="6">Vỉ Treo</th>
-        <th colspan="9">Bảo Phủ</th>
+        <th colspan="8">Kệ Trưng Bày</th>
+        <th colspan="7">Vỉ Treo</th>
+        <th colspan="10">Bảo Phủ</th>
       </tr>`
 
     const headerMid = `
       <tr>
         <th colspan="3">ACBT</th>
-        <th colspan="4">Đối thủ</th>
+        <th colspan="5">Đối thủ</th>
         <th colspan="2">ACBT</th>
-        <th colspan="4">Đối thủ</th>
+        <th colspan="5">Đối thủ</th>
         <th colspan="2">Chân Gà</th>
-        <th colspan="5">Bim Khô</th>
+        <th colspan="6">Bim Khô</th>
         <th colspan="2">Bim Ướt</th>
       </tr>`
 
@@ -500,12 +512,14 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
       hangDoiThuKe: 0,
       keLays: 0,
       keOishi: 0,
+      keOrion: 0,
       kePoca: 0,
       keKhac: 0,
       viAcbt: 0,
       hangDoiThuVi: 0,
       viLays: 0,
       viOishi: 0,
+      viOrion: 0,
       viPoca: 0,
       viKhac: 0,
       chanGaAcbt: 0,
@@ -513,6 +527,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
       bimKhoAcbt: 0,
       bimKhoLays: 0,
       bimKhoOishi: 0,
+      bimKhoOrion: 0,
       bimKhoPoca: 0,
       bimKhoKhac: 0,
       bimUotAcbt: 0,
@@ -526,12 +541,14 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
       totalMetrics.hangDoiThuKe += extractCount(row.hangDoiThuKe)
       totalMetrics.keLays += extractCount(row.keLays)
       totalMetrics.keOishi += extractCount(row.keOishi)
+      totalMetrics.keOrion += extractCount(row.keOrion)
       totalMetrics.kePoca += extractCount(row.kePoca)
       totalMetrics.keKhac += extractCount(row.keKhac)
       totalMetrics.viAcbt += extractCount(row.viAcbt)
       totalMetrics.hangDoiThuVi += extractCount(row.hangDoiThuVi)
       totalMetrics.viLays += extractCount(row.viLays)
       totalMetrics.viOishi += extractCount(row.viOishi)
+      totalMetrics.viOrion += extractCount(row.viOrion)
       totalMetrics.viPoca += extractCount(row.viPoca)
       totalMetrics.viKhac += extractCount(row.viKhac)
       totalMetrics.chanGaAcbt += extractCount(row.chanGaAcbt)
@@ -539,6 +556,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
       totalMetrics.bimKhoAcbt += extractCount(row.bimKhoAcbt)
       totalMetrics.bimKhoLays += extractCount(row.bimKhoLays)
       totalMetrics.bimKhoOishi += extractCount(row.bimKhoOishi)
+      totalMetrics.bimKhoOrion += extractCount(row.bimKhoOrion)
       totalMetrics.bimKhoPoca += extractCount(row.bimKhoPoca)
       totalMetrics.bimKhoKhac += extractCount(row.bimKhoKhac)
       totalMetrics.bimUotAcbt += extractCount(row.bimUotAcbt)
@@ -564,9 +582,9 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
       </tr>`
 
     const filterSummary = `
-      <tr><td colspan="25" class="meta-row">Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}</td></tr>
-      <tr><td colspan="25" class="meta-row">Người tạo: ${chartCreatorFilter || creatorFilter || 'Tất cả'}</td></tr>
-      <tr><td colspan="25" class="meta-row">Khoảng thời gian: ${
+      <tr><td colspan="27" class="meta-row">Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}</td></tr>
+      <tr><td colspan="27" class="meta-row">Người tạo: ${chartCreatorFilter || creatorFilter || 'Tất cả'}</td></tr>
+      <tr><td colspan="27" class="meta-row">Khoảng thời gian: ${
         dateFilterValue
           ? dateFilterMode === 'day'
             ? `Ngày ${dateFilterValue}`
@@ -860,17 +878,17 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
                       <th rowSpan={3}>Người tạo</th>
                       <th rowSpan={3}>Tổng CH</th>
                       <th rowSpan={3}>Có trên DMS</th>
-                      <th colSpan={7}>Kệ Trưng Bày</th>
-                      <th colSpan={6}>Vỉ Treo</th>
-                      <th colSpan={9}>Bao Phủ</th>
+                      <th colSpan={8}>Kệ Trưng Bày</th>
+                      <th colSpan={7}>Vỉ Treo</th>
+                      <th colSpan={10}>Bao Phủ</th>
                     </tr>
                     <tr>
                       <th colSpan={3}>ACBT</th>
-                      <th colSpan={4}>Đối thủ</th>
+                      <th colSpan={5}>Đối thủ</th>
                       <th colSpan={2}>ACBT</th>
-                      <th colSpan={4}>Đối thủ</th>
+                      <th colSpan={5}>Đối thủ</th>
                       <th colSpan={2}>Chân Gà</th>
-                      <th colSpan={5}>Snack Khô</th>
+                      <th colSpan={6}>Snack Khô</th>
                       <th colSpan={3}>Snack Ướt</th>
                     </tr>
                     <tr>
@@ -879,12 +897,14 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
                       <th>Có hàng đối thủ</th>
                       <th>Lay&apos;s</th>
                       <th>Oishi</th>
+                      <th>Orion</th>
                       <th>Poca</th>
                       <th>Khác</th>
                       <th>Có hàng ACBT</th>
                       <th>Có hàng đối thủ</th>
                       <th>Lay&apos;s</th>
                       <th>Oishi</th>
+                      <th>Orion</th>
                       <th>Poca</th>
                       <th>Khác</th>
                       <th>Chân Gà ACBT</th>
@@ -892,6 +912,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
                       <th>Snack ACBT</th>
                       <th>Lay&apos;s</th>
                       <th>Oishi</th>
+                      <th>Orion</th>
                       <th>Poca</th>
                       <th>Khác</th>
                       <th>Snack Ướt ACBT</th>
@@ -909,12 +930,14 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
                         <td>{row.hangDoiThuKe}</td>
                         <td>{row.keLays}</td>
                         <td>{row.keOishi}</td>
+                        <td>{row.keOrion}</td>
                         <td>{row.kePoca}</td>
                         <td>{row.keKhac}</td>
                         <td>{row.viAcbt}</td>
                         <td>{row.hangDoiThuVi}</td>
                         <td>{row.viLays}</td>
                         <td>{row.viOishi}</td>
+                        <td>{row.viOrion}</td>
                         <td>{row.viPoca}</td>
                         <td>{row.viKhac}</td>
                         <td>{row.chanGaAcbt}</td>
@@ -922,6 +945,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
                         <td>{row.bimKhoAcbt}</td>
                         <td>{row.bimKhoLays}</td>
                         <td>{row.bimKhoOishi}</td>
+                        <td>{row.bimKhoOrion}</td>
                         <td>{row.bimKhoPoca}</td>
                         <td>{row.bimKhoKhac}</td>
                         <td>{row.bimUotAcbt}</td>

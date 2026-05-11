@@ -55,10 +55,12 @@ type BooleanField =
   | 'DoiThuOishi'
   | 'DoiThuPoca'
   | 'DoiThuKhac'
+  | 'DoiThuOrion'
   | 'CoViACBT'
   | 'CoHangDoiThuVi'
   | 'ViDoiThuLays'
   | 'ViDoiThuOishi'
+  | 'ViDoiThuOrion'
   | 'ViDoiThuPoca'
   | 'ViDoiThuKhac'
   | 'ChanGaACBT'
@@ -66,6 +68,7 @@ type BooleanField =
   | 'BimKhoACBT'
   | 'BimKhoDoiThuLays'
   | 'BimKhoDoiThuOishi'
+  | 'BimKhoDoiThuOrion'
   | 'BimKhoDoiThuPoca'
   | 'BimKhoDoiThuKhac'
   | 'BimUotACBT'
@@ -88,12 +91,14 @@ const INITIAL_FORM: StorePayload = {
   CoHangDoiThuKhong: false,
   DoiThuLays: false,
   DoiThuOishi: false,
+  DoiThuOrion: false,
   DoiThuPoca: false,
   DoiThuKhac: false,
   CoViACBT: false,
   CoHangDoiThuVi: false,
   ViDoiThuLays: false,
   ViDoiThuOishi: false,
+  ViDoiThuOrion: false,
   ViDoiThuPoca: false,
   ViDoiThuKhac: false,
   ChanGaACBT: false,
@@ -101,6 +106,7 @@ const INITIAL_FORM: StorePayload = {
   BimKhoACBT: false,
   BimKhoDoiThuLays: false,
   BimKhoDoiThuOishi: false,
+  BimKhoDoiThuOrion: false,
   BimKhoDoiThuPoca: false,
   BimKhoDoiThuKhac: false,
   BimUotACBT: false,
@@ -118,12 +124,14 @@ const BOOLEAN_FIELDS: BooleanField[] = [
   'CoHangDoiThuKhong',
   'DoiThuLays',
   'DoiThuOishi',
+  'DoiThuOrion',
   'DoiThuPoca',
   'DoiThuKhac',
   'CoViACBT',
   'CoHangDoiThuVi',
   'ViDoiThuLays',
   'ViDoiThuOishi',
+  'ViDoiThuOrion',
   'ViDoiThuPoca',
   'ViDoiThuKhac',
   'ChanGaACBT',
@@ -131,6 +139,7 @@ const BOOLEAN_FIELDS: BooleanField[] = [
   'BimKhoACBT',
   'BimKhoDoiThuLays',
   'BimKhoDoiThuOishi',
+  'BimKhoDoiThuOrion',
   'BimKhoDoiThuPoca',
   'BimKhoDoiThuKhac',
   'BimUotACBT',
@@ -153,10 +162,12 @@ const FIELD_LABELS: Record<StringField | OptionalTextField | BooleanField, strin
   DoiThuOishi: 'Oishi',
   DoiThuPoca: 'Poca',
   DoiThuKhac: 'Khác',
+  DoiThuOrion: 'Kệ đốithủ  Orion',
   CoViACBT: 'Có vị',
   CoHangDoiThuVi: 'Có hàng đối thủ không',
   ViDoiThuLays: "Lay's",
   ViDoiThuOishi: 'Oishi',
+  ViDoiThuOrion: 'Vỉ đối thủ Orion',
   ViDoiThuPoca: 'Poca',
   ViDoiThuKhac: 'Khác',
   ChanGaACBT: 'Chân Gà ACBT',
@@ -164,6 +175,7 @@ const FIELD_LABELS: Record<StringField | OptionalTextField | BooleanField, strin
   BimKhoACBT: 'Bim ACBT',
   BimKhoDoiThuLays: "Lay's",
   BimKhoDoiThuOishi: 'Oishi',
+  BimKhoDoiThuOrion: 'Snack khô đối thủ',
   BimKhoDoiThuPoca: 'Poca',
   BimKhoDoiThuKhac: 'Khác',
   BimUotACBT: 'Bim Ướt ACBT',
@@ -188,11 +200,11 @@ const DETAIL_LABELS: Record<string, string> = {
 const BOOLEAN_GROUPS: BooleanGroup[] = [
   {
     title: 'Kệ Trưng Bày',
-    fields: ['CoKeACBT', 'TraThuongTB', 'CoHangDoiThuKhong', 'DoiThuLays', 'DoiThuOishi', 'DoiThuPoca', 'DoiThuKhac'],
+    fields: ['CoKeACBT', 'TraThuongTB', 'CoHangDoiThuKhong', 'DoiThuLays', 'DoiThuOishi', 'DoiThuOrion', 'DoiThuPoca', 'DoiThuKhac'],
   },
   {
     title: 'Vị Treo',
-    fields: ['CoViACBT', 'CoHangDoiThuVi', 'ViDoiThuLays', 'ViDoiThuOishi', 'ViDoiThuPoca', 'ViDoiThuKhac'],
+    fields: ['CoViACBT', 'CoHangDoiThuVi', 'ViDoiThuLays', 'ViDoiThuOishi', 'ViDoiThuOrion', 'ViDoiThuPoca', 'ViDoiThuKhac'],
   },
   {
     title: 'Bao Phủ - Chân Gà',
@@ -200,7 +212,7 @@ const BOOLEAN_GROUPS: BooleanGroup[] = [
   },
   {
     title: 'Bao Phủ - Bim Khô',
-    fields: ['BimKhoACBT', 'BimKhoDoiThuLays', 'BimKhoDoiThuOishi', 'BimKhoDoiThuPoca', 'BimKhoDoiThuKhac'],
+    fields: ['BimKhoACBT', 'BimKhoDoiThuLays', 'BimKhoDoiThuOishi', 'BimKhoDoiThuOrion', 'BimKhoDoiThuPoca', 'BimKhoDoiThuKhac'],
   },
   {
     title: 'Bao Phủ - Bim Ướt',
@@ -264,9 +276,6 @@ function getDetailLabel(key: string): string {
   return DETAIL_LABELS[key] ?? key
 }
 
-function isImageField(key: string): boolean {
-  return ['HinhAnh', 'hinh_anh', 'AnhCH', 'anh'].includes(key)
-}
 
 function getStoreCreatorLabel(store: Store): string {
   const value =
@@ -878,23 +887,67 @@ export default function StoreFieldReportPage({
             </div>
 
             <div className="detail-grid">
-              {Object.entries(selectedStore).map(([key, value]) => (
-                <div className="detail-item" key={key}>
-                  <span>{getDetailLabel(key)}</span>
-                  {isImageField(key) && typeof value === 'string' && value.trim() ? (
-                    <img
-                      className="store-detail-image"
-                      src={resolveImageUrl(value)}
-                      alt={selectedStore.TenCH ?? 'Hình ảnh cửa hàng'}
-                      loading="lazy"
-                    />
-                  ) : key === 'ngay_tao' || key === 'NgayTao' || key === 'created_at' || key === 'CreatedAt' ? (
-                    <strong>{formatStoreDateTime(value)}</strong>
-                  ) : (
-                    <strong>{formatStoreValue(value)}</strong>
-                  )}
-                </div>
-              ))}
+              {(() => {
+                const entries = Object.entries(selectedStore)
+
+                const imageKeys = ['HinhAnh', 'hinh_anh', 'AnhCH', 'anh']
+                const creatorKeys = ['NguoiTao', 'nguoi_tao', 'NguoiThucHien', 'TenNguoiThucHien', 'ten_nguoi_thuc_hien']
+                const dateKeys = ['ngay_tao', 'NgayTao', 'created_at', 'CreatedAt', 'ngayTao']
+
+                const specialKeySet = new Set([...imageKeys, ...creatorKeys, ...dateKeys])
+
+                // render non-special fields first in original order
+                const normal = entries.filter(([k]) => !specialKeySet.has(k))
+
+                // helper to find first existing key from a list
+                const findFirst = (keys: string[]) => {
+                  for (const k of keys) {
+                    if (k in selectedStore) return k
+                  }
+                  return null
+                }
+
+                const imageKey = findFirst(imageKeys)
+                const dateKey = findFirst(dateKeys)
+                const creatorKey = findFirst(creatorKeys)
+
+                return (
+                  <>
+                    {normal.map(([key, value]) => (
+                      <div className="detail-item" key={key}>
+                        <span>{getDetailLabel(key)}</span>
+                        <strong>{formatStoreValue(value)}</strong>
+                      </div>
+                    ))}
+
+                    {imageKey && typeof (selectedStore as any)[imageKey] === 'string' && (selectedStore as any)[imageKey].trim() ? (
+                      <div className="detail-item" key={imageKey}>
+                        <span>{getDetailLabel(imageKey)}</span>
+                        <img
+                          className="store-detail-image"
+                          src={resolveImageUrl((selectedStore as any)[imageKey])}
+                          alt={selectedStore.TenCH ?? 'Hình ảnh cửa hàng'}
+                          loading="lazy"
+                        />
+                      </div>
+                    ) : null}
+
+                    {creatorKey ? (
+                      <div className="detail-item" key={creatorKey}>
+                        <span>{getDetailLabel(creatorKey)}</span>
+                        <strong>{getStoreCreatorLabel(selectedStore)}</strong>
+                      </div>
+                    ) : null}
+
+                    {dateKey ? (
+                      <div className="detail-item" key={dateKey}>
+                        <span>{getDetailLabel(dateKey)}</span>
+                        <strong>{formatStoreDateTime((selectedStore as any)[dateKey])}</strong>
+                      </div>
+                    ) : null}
+                  </>
+                )
+              })()}
             </div>
           </div>
         </div>

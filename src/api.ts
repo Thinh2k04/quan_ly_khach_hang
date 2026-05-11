@@ -35,8 +35,10 @@ export type Store = {
   DoiThuLays?: boolean
   DoiThuOishi?: boolean
   DoiThuPoca?: boolean
+  DoiThuOrion?: boolean
   DoiThuKhac?: boolean
   CoViACBT?: boolean
+  ViDoiThuOrion?: boolean
   CoHangDoiThuVi?: boolean
   ViDoiThuLays?: boolean
   ViDoiThuOishi?: boolean
@@ -48,6 +50,7 @@ export type Store = {
   BimKhoDoiThuLays?: boolean
   BimKhoDoiThuOishi?: boolean
   BimKhoDoiThuPoca?: boolean
+  BimKhoDoiThuOrion?: boolean
   BimKhoDoiThuKhac?: boolean
   BimUotACBT?: boolean
   BimUotDoiThu?: boolean
@@ -68,12 +71,14 @@ export type StorePayload = {
   DoiThuLays: boolean
   DoiThuOishi: boolean
   DoiThuPoca: boolean
+  DoiThuOrion: boolean
   DoiThuKhac: boolean
   CoViACBT: boolean
   CoHangDoiThuVi: boolean
   ViDoiThuLays: boolean
   ViDoiThuOishi: boolean
   ViDoiThuPoca: boolean
+  ViDoiThuOrion: boolean
   ViDoiThuKhac: boolean
   ChanGaACBT: boolean
   ChanGaDoiThu: boolean
@@ -81,6 +86,7 @@ export type StorePayload = {
   BimKhoDoiThuLays: boolean
   BimKhoDoiThuOishi: boolean
   BimKhoDoiThuPoca: boolean
+  BimKhoDoiThuOrion: boolean
   BimKhoDoiThuKhac: boolean
   BimUotACBT: boolean
   BimUotDoiThu: boolean
