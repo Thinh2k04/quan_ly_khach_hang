@@ -724,7 +724,7 @@
 
   .report-chart-row {
     display: grid;
-    grid-template-columns: minmax(110px, 220px) 1fr 40px;
+    grid-template-columns: minmax(110px, 220px) 1fr minmax(72px, 92px);
     gap: 10px;
     align-items: center;
   }
@@ -740,7 +740,15 @@
   .report-chart-row strong {
     color: #0f172a;
     text-align: right;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .report-chart-divider {
+    grid-column: 1 / -1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.85), transparent);
+    margin: 6px 0;
   }
 
   .report-bar-track {
@@ -1389,6 +1397,10 @@
 
     .report-chart-row strong {
       text-align: left;
+    }
+
+    .report-chart-divider {
+      margin: 2px 0 4px;
     }
 
     .toolbar__actions {

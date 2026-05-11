@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import type { Store } from '../api'
 import PieChart from './PieChart'
-import GroupedColumnChart from './GroupedColumnChart'
 
 type StoreReportModalProps = {
   stores: Store[]
@@ -15,6 +14,8 @@ type DateFilterMode = 'day' | 'week' | 'month'
 type ReportPoint = {
   label: string
   value: number
+  isDivider?: boolean
+  showPercent?: boolean
 }
 
 type StorePercentRow = {
@@ -177,12 +178,14 @@ function ReportBars({
   title,
   items,
   barClassName,
+  totalBase,
 }: {
   title: string
   items: ReportPoint[]
   barClassName: string
+  totalBase: number
 }) {
-  const maxValue = Math.max(...items.map((item) => item.value), 1)
+  const maxValue = Math.max(...items.filter((item) => !item.isDivider).map((item) => item.value), 1)
 
   return (
     <section className="report-card">
@@ -191,15 +194,25 @@ function ReportBars({
         <p className="report-empty">Chưa có dữ liệu để hiển thị.</p>
       ) : (
         <div className="report-chart-list">
-          {items.map((item) => (
-            <div className="report-chart-row" key={item.label}>
-              <span>{item.label}</span>
-              <div className="report-bar-track">
-                <div className={barClassName} style={{ width: `${(item.value / maxValue) * 100}%` }} />
+          {items.map((item, index) => {
+            if (item.isDivider) {
+              return (
+                <div className="report-chart-divider" key={`divider-${index}`} aria-hidden="true" />
+              )
+            }
+
+            const percentText = item.showPercent === false ? '' : totalBase > 0 ? `${Math.round((item.value / totalBase) * 100)}%` : '0%'
+
+            return (
+              <div className="report-chart-row" key={`${item.label}-${index}`}>
+                <span>{item.label}</span>
+                <div className="report-bar-track">
+                  <div className={barClassName} style={{ width: `${(item.value / maxValue) * 100}%` }} />
+                </div>
+                <strong>{percentText ? `${item.value} (${percentText})` : item.value}</strong>
               </div>
-              <strong>{item.value}</strong>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </section>
@@ -208,7 +221,6 @@ function ReportBars({
 
 export default function StoreReportModal({ stores, isOpen, onClose, canExport }: StoreReportModalProps) {
   const [creatorFilter, setCreatorFilter] = useState('')
-  const [chartCreatorFilter, setChartCreatorFilter] = useState('')
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('day')
   const [dateFilterValue, setDateFilterValue] = useState('')
   const [dmsFilter, setDmsFilter] = useState<'all' | 'co' | 'chua'>('all')
@@ -350,13 +362,151 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
       .sort((a, b) => b.total - a.total)
   }, [filteredStores])
 
-  const chartRows = useMemo(() => {
-    if (!chartCreatorFilter) {
-      return percentRows
-    }
+  // Helper function to extract count from percentage string (e.g., "10 (50%)" → 10)
+  const extractCount = (text: string): number => {
+    const match = /^\s*(\d+)\b/.exec(String(text))
+    return match ? Number(match[1]) : 0
+  }
 
-    return percentRows.filter((row) => row.creator === chartCreatorFilter)
-  }, [chartCreatorFilter, percentRows])
+  // Compute chart data based on creatorFilter
+  const chartDmsKeData = useMemo<ReportPoint[]>(() => {
+    if (percentRows.length === 0) return []
+
+    if (!creatorFilter) {
+      // Aggregate all creators
+      const totalStores = filteredStores.length
+      const dmsCount = percentRows.reduce((sum, row) => sum + extractCount(row.coTrenDms), 0)
+      const notDmsCount = totalStores - dmsCount
+
+      return [
+        { label: 'Tổng CH', value: totalStores },
+        { label: 'Có trên DMS', value: dmsCount },
+        { label: 'Chưa có trên DMS', value: notDmsCount },
+      ]
+    } else {
+      // Show only selected creator's data
+      const row = percentRows.find((r) => r.creator === creatorFilter)
+      if (!row) return []
+
+      const dmsCount = extractCount(row.coTrenDms)
+      const notDmsCount = row.total - dmsCount
+
+      return [
+        { label: 'Tổng CH', value: row.total },
+        { label: 'Có trên DMS', value: dmsCount },
+        { label: 'Chưa có trên DMS', value: notDmsCount },
+      ]
+    }
+  }, [percentRows, creatorFilter, filteredStores])
+
+  const chartKeData = useMemo<ReportPoint[]>(() => {
+    if (percentRows.length === 0) return []
+
+    if (!creatorFilter) {
+      // Aggregate all creators for all kệ fields
+      return [
+        { label: 'Có kệ', value: percentRows.reduce((sum, row) => sum + extractCount(row.coKeAcbt), 0) },
+        { label: 'Trả thưởng TB', value: percentRows.reduce((sum, row) => sum + extractCount(row.traThuongTb), 0), showPercent: false },
+        { label: 'Có hàng đối thủ', value: percentRows.reduce((sum, row) => sum + extractCount(row.hangDoiThuKe), 0), showPercent: false },
+        { label: '', value: 0, isDivider: true },
+        { label: "Lay's", value: percentRows.reduce((sum, row) => sum + extractCount(row.keLays), 0) },
+        { label: 'Oishi', value: percentRows.reduce((sum, row) => sum + extractCount(row.keOishi), 0) },
+        { label: 'Orion', value: percentRows.reduce((sum, row) => sum + extractCount(row.keOrion), 0) },
+        { label: 'Poca', value: percentRows.reduce((sum, row) => sum + extractCount(row.kePoca), 0) },
+        { label: 'Khác', value: percentRows.reduce((sum, row) => sum + extractCount(row.keKhac), 0) },
+      ]
+    } else {
+      // Show only selected creator's kệ data
+      const row = percentRows.find((r) => r.creator === creatorFilter)
+      if (!row) return []
+
+      return [
+        { label: 'Có kệ', value: extractCount(row.coKeAcbt) },
+        { label: 'Trả thưởng TB', value: extractCount(row.traThuongTb), showPercent: false },
+        { label: 'Có hàng đối thủ', value: extractCount(row.hangDoiThuKe), showPercent: false },
+        { label: '', value: 0, isDivider: true },
+        { label: "Lay's", value: extractCount(row.keLays) },
+        { label: 'Oishi', value: extractCount(row.keOishi) },
+        { label: 'Orion', value: extractCount(row.keOrion) },
+        { label: 'Poca', value: extractCount(row.kePoca) },
+        { label: 'Khác', value: extractCount(row.keKhac) },
+      ]
+    }
+  }, [percentRows, creatorFilter])
+
+  const chartViData = useMemo<ReportPoint[]>(() => {
+    if (percentRows.length === 0) return []
+
+    if (!creatorFilter) {
+      // Aggregate all creators for all vỉ fields
+      return [
+        { label: 'Có vỉ', value: percentRows.reduce((sum, row) => sum + extractCount(row.viAcbt), 0) },
+        { label: 'Có hàng đối thủ', value: percentRows.reduce((sum, row) => sum + extractCount(row.hangDoiThuVi), 0), showPercent: false },
+        { label: '', value: 0, isDivider: true },
+        { label: "Lay's", value: percentRows.reduce((sum, row) => sum + extractCount(row.viLays), 0) },
+        { label: 'Oishi', value: percentRows.reduce((sum, row) => sum + extractCount(row.viOishi), 0) },
+        { label: 'Orion', value: percentRows.reduce((sum, row) => sum + extractCount(row.viOrion), 0) },
+        { label: 'Poca', value: percentRows.reduce((sum, row) => sum + extractCount(row.viPoca), 0) },
+        { label: 'Khác', value: percentRows.reduce((sum, row) => sum + extractCount(row.viKhac), 0) },
+      ]
+    } else {
+      // Show only selected creator's vỉ data
+      const row = percentRows.find((r) => r.creator === creatorFilter)
+      if (!row) return []
+
+      return [
+        { label: 'Có vỉ', value: extractCount(row.viAcbt) },
+        { label: 'Có hàng đối thủ', value: extractCount(row.hangDoiThuVi), showPercent: false },
+        { label: '', value: 0, isDivider: true },
+        { label: "Lay's", value: extractCount(row.viLays) },
+        { label: 'Oishi', value: extractCount(row.viOishi) },
+        { label: 'Orion', value: extractCount(row.viOrion) },
+        { label: 'Poca', value: extractCount(row.viPoca) },
+        { label: 'Khác', value: extractCount(row.viKhac) },
+      ]
+    }
+  }, [percentRows, creatorFilter])
+
+  const chartBaoPhData = useMemo<ReportPoint[]>(() => {
+    if (percentRows.length === 0) return []
+
+    if (!creatorFilter) {
+      // Aggregate all creators for bảo phủ fields
+      return [
+        { label: 'Chân Gà ACBT', value: percentRows.reduce((sum, row) => sum + extractCount(row.chanGaAcbt), 0) },
+        { label: 'Chân Gà đối thủ', value: percentRows.reduce((sum, row) => sum + extractCount(row.chanGaDoiThu), 0) },
+        { label: '', value: 0, isDivider: true },
+        { label: 'Snack Khô ACBT', value: percentRows.reduce((sum, row) => sum + extractCount(row.bimKhoAcbt), 0) },
+        { label: "Snack Khô Lay's", value: percentRows.reduce((sum, row) => sum + extractCount(row.bimKhoLays), 0) },
+        { label: 'Snack Khô Oishi', value: percentRows.reduce((sum, row) => sum + extractCount(row.bimKhoOishi), 0) },
+        { label: 'Snack Khô Orion', value: percentRows.reduce((sum, row) => sum + extractCount(row.bimKhoOrion), 0) },
+        { label: 'Snack Khô Poca', value: percentRows.reduce((sum, row) => sum + extractCount(row.bimKhoPoca), 0) },
+        { label: 'Snack Khô Khác', value: percentRows.reduce((sum, row) => sum + extractCount(row.bimKhoKhac), 0) },
+        { label: '', value: 0, isDivider: true },
+        { label: 'Snack Ướt ACBT', value: percentRows.reduce((sum, row) => sum + extractCount(row.bimUotAcbt), 0) },
+        { label: 'Snack Ướt ĐT', value: percentRows.reduce((sum, row) => sum + extractCount(row.bimUotDoiThu), 0) },
+      ]
+    } else {
+      // Show only selected creator's bảo phủ data
+      const row = percentRows.find((r) => r.creator === creatorFilter)
+      if (!row) return []
+
+      return [
+        { label: 'Chân Gà ACBT', value: extractCount(row.chanGaAcbt) },
+        { label: 'Chân Gà đối thủ', value: extractCount(row.chanGaDoiThu) },
+        { label: '', value: 0, isDivider: true },
+        { label: 'Snack Khô ACBT', value: extractCount(row.bimKhoAcbt) },
+        { label: "Snack Khô Lay's", value: extractCount(row.bimKhoLays) },
+        { label: 'Snack Khô Oishi', value: extractCount(row.bimKhoOishi) },
+        { label: 'Snack Khô Orion', value: extractCount(row.bimKhoOrion) },
+        { label: 'Snack Khô Poca', value: extractCount(row.bimKhoPoca) },
+        { label: 'Snack Khô Khác', value: extractCount(row.bimKhoKhac) },
+        { label: '', value: 0, isDivider: true },
+        { label: 'Snack Ướt ACBT', value: extractCount(row.bimUotAcbt) },
+        { label: 'Snack Ướt ĐT', value: extractCount(row.bimUotDoiThu) },
+      ]
+    }
+  }, [percentRows, creatorFilter])
 
   const onTablePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     const container = event.currentTarget
@@ -583,7 +733,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
 
     const filterSummary = `
       <tr><td colspan="27" class="meta-row">Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}</td></tr>
-      <tr><td colspan="27" class="meta-row">Người tạo: ${chartCreatorFilter || creatorFilter || 'Tất cả'}</td></tr>
+      <tr><td colspan="27" class="meta-row">Người tạo: ${creatorFilter || 'Tất cả'}</td></tr>
       <tr><td colspan="27" class="meta-row">Khoảng thời gian: ${
         dateFilterValue
           ? dateFilterMode === 'day'
@@ -854,8 +1004,8 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
         </div>
 
         <div className="report-grid">
-          <ReportBars title="Theo người tạo" items={byCreator} barClassName="report-bar report-bar--creator" />
-          <ReportBars title="Theo tỉnh/thành" items={byProvince} barClassName="report-bar report-bar--day" />
+          <ReportBars title="Theo người tạo" items={byCreator} totalBase={filteredStores.length} barClassName="report-bar report-bar--creator" />
+          <ReportBars title="Theo tỉnh/thành" items={byProvince} totalBase={filteredStores.length} barClassName="report-bar report-bar--day" />
 
           <section className="report-card report-card--full report-chart-inline">
             <h3>Bảng tỷ lệ thực địa theo người tạo</h3>
@@ -958,121 +1108,34 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
             )}
 
             <div style={{ marginTop: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
-                <label className="combo-box" htmlFor="store-report-chart-creator" style={{ minWidth: 240 }}>
-                  <span>Chọn người xem biểu đồ</span>
-                  <select
-                    id="store-report-chart-creator"
-                    value={chartCreatorFilter}
-                    onChange={(event) => setChartCreatorFilter(event.target.value)}
-                  >
-                    <option value="">Tất cả người tạo</option>
-                    {creatorOptions.map((creator) => (
-                      <option key={creator} value={creator}>
-                        {creator}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <h4 style={{ margin: '0 0 8px 0' }}>Biểu đồ cột — tất cả trường dữ liệu</h4>
-              <div style={{ marginTop: 8 }}>
-                {/* Build grouped series: ACBT vs Đối thủ totals per creator */}
-                {(() => {
-                  const categories = chartRows.map((r) => r.creator)
-                  function leadNum(text: string | number) {
-                    const m = /^\s*(\d+)\b/.exec(String(text))
-                    return m ? Number(m[1]) : 0
-                  }
-
-                  const acbt = chartRows.map((r) => {
-                    return (
-                      leadNum(r.coKeAcbt) +
-                      leadNum(r.viAcbt) +
-                      leadNum(r.bimKhoAcbt) +
-                      leadNum(r.bimUotAcbt) +
-                      leadNum(r.traThuongTb) +
-                      leadNum(r.chanGaAcbt)
-                    )
-                  })
-
-                  const doi = chartRows.map((r) => {
-                    return (
-                      leadNum(r.hangDoiThuKe) +
-                      leadNum(r.keLays) +
-                      leadNum(r.keOishi) +
-                      leadNum(r.kePoca) +
-                      leadNum(r.keKhac) +
-                      leadNum(r.hangDoiThuVi) +
-                      leadNum(r.viLays) +
-                      leadNum(r.viOishi) +
-                      leadNum(r.viPoca) +
-                      leadNum(r.viKhac) +
-                      leadNum(r.bimKhoLays) +
-                      leadNum(r.bimKhoOishi) +
-                      leadNum(r.bimKhoPoca) +
-                      leadNum(r.bimKhoKhac) +
-                      leadNum(r.bimUotDoiThu) +
-                      leadNum(r.chanGaDoiThu)
-                    )
-                  })
-
-                  const series = [
-                    { name: 'ACBT', values: acbt },
-                    { name: 'Đối thủ', values: doi },
-                  ]
-
-                  return <GroupedColumnChart categories={categories} series={series} height={180} compact />
-                })()}
-              </div>
-              <div style={{ marginTop: 12 }}>
-                <h4 style={{ margin: '0 0 8px 0' }}>Biểu đồ cột — theo từng trường</h4>
-                {(() => {
-                  const categories = chartRows.map((r) => r.creator)
-                  function leadNum(text: string | number) {
-                    const m = /^\s*(\d+)\b/.exec(String(text))
-                    return m ? Number(m[1]) : 0
-                  }
-
-                  const metrics: { key: keyof StorePercentRow; label: string }[] = [
-                    { key: 'coTrenDms', label: 'DMS' },
-                    { key: 'coKeAcbt', label: 'Kệ ACBT' },
-                    { key: 'traThuongTb', label: 'Kệ TT' },
-                    { key: 'hangDoiThuKe', label: 'Kệ ĐT' },
-                    { key: 'keLays', label: "Lay's kệ" },
-                    { key: 'keOishi', label: 'Oishi kệ' },
-                    { key: 'kePoca', label: 'Poca kệ' },
-                    { key: 'keKhac', label: 'Khác kệ' },
-                    { key: 'viAcbt', label: 'Vỉ ACBT' },
-                    { key: 'hangDoiThuVi', label: 'Vỉ ĐT' },
-                    { key: 'viLays', label: "Lay's vỉ" },
-                    { key: 'viOishi', label: 'Oishi vỉ' },
-                    { key: 'viPoca', label: 'Poca vỉ' },
-                    { key: 'viKhac', label: 'Khác vỉ' },
-                    { key: 'chanGaAcbt', label: 'Gà ACBT' },
-                    { key: 'chanGaDoiThu', label: 'Gà ĐT' },
-                    { key: 'bimKhoAcbt', label: 'Snack ACBT' },
-                    { key: 'bimKhoLays', label: "Lay's snack" },
-                    { key: 'bimKhoOishi', label: 'Oishi snack' },
-                    { key: 'bimKhoPoca', label: 'Poca snack' },
-                    { key: 'bimKhoKhac', label: 'Khác snack' },
-                    { key: 'bimUotAcbt', label: 'Ướt ACBT' },
-                    { key: 'bimUotDoiThu', label: 'Ướt ĐT' },
-                  ]
-
-                  const series = metrics.map((m) => ({
-                    name: m.label,
-                    values: chartRows.map((r) => leadNum(r[m.key])),
-                  }))
-
-                  return (
-                    <div style={{ overflowX: 'auto' }}>
-                      <GroupedColumnChart categories={categories} series={series} height={220} compact />
-                    </div>
-                  )
-                })()}
-              </div>
+              {percentRows.length > 0 && (
+                <>
+                  <h3 style={{ marginTop: 24, marginBottom: 12 }}>Biểu đồ theo danh mục</h3>
+                  <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+                    <label className="combo-box" htmlFor="store-report-chart-creator" style={{ minWidth: 240 }}>
+                      <span>Chọn người xem biểu đồ</span>
+                      <select
+                        id="store-report-chart-creator"
+                        value={creatorFilter}
+                        onChange={(event) => setCreatorFilter(event.target.value)}
+                      >
+                        <option value="">Tất cả người tạo</option>
+                        {creatorOptions.map((creator) => (
+                          <option key={creator} value={creator}>
+                            {creator}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="report-grid">
+                    <ReportBars title="Có trên DMS" items={chartDmsKeData} totalBase={creatorFilter ? (percentRows.find((row) => row.creator === creatorFilter)?.total ?? 0) : filteredStores.length} barClassName="report-bar report-bar--creator" />
+                    <ReportBars title="Kệ Trưng Bày" items={chartKeData} totalBase={creatorFilter ? (percentRows.find((row) => row.creator === creatorFilter)?.total ?? 0) : filteredStores.length} barClassName="report-bar report-bar--creator" />
+                    <ReportBars title="Vỉ Treo" items={chartViData} totalBase={creatorFilter ? (percentRows.find((row) => row.creator === creatorFilter)?.total ?? 0) : filteredStores.length} barClassName="report-bar report-bar--creator" />
+                    <ReportBars title="Bảo Phủ" items={chartBaoPhData} totalBase={creatorFilter ? (percentRows.find((row) => row.creator === creatorFilter)?.total ?? 0) : filteredStores.length} barClassName="report-bar report-bar--creator" />
+                  </div>
+                </>
+              )}
             </div>
           </section>
         </div>
