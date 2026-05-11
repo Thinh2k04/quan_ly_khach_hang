@@ -18,16 +18,17 @@ type AppUser = {
   code: string
   fullName: string
   role: UserRole
+  canViewAll: boolean
   canExport: boolean
 }
 
 const LOGIN_USERS: Record<string, AppUser> = {
-  ACBT999: { code: 'ACBT999', fullName: 'Quản trị viên', role: 'editor', canExport: true },
-  ADTHANH: { code: 'ADTHANH', fullName: 'Ngô Ngọc Thành', role: 'viewer', canExport: false },
-  ADHAI: { code: 'ADHAI', fullName: 'Nguyễn Đình Hải', role: 'viewer', canExport: false },
-  ADHA: { code: 'ADHA', fullName: 'Nguyễn Đình Hà', role: 'viewer', canExport: false },
-  ADDUC: { code: 'ADDUC', fullName: 'Nguyễn Anh Đức', role: 'viewer', canExport: false },
-  ADHUNG: { code: 'ADHUNG', fullName: 'Nguyễn Mạnh Hùng', role: 'viewer', canExport: false },
+  ACBT999: { code: 'ACBT999', fullName: 'Quản trị viên', role: 'editor', canViewAll: true, canExport: true },
+  ADTHANH: { code: 'ADTHANH', fullName: 'Ngô Ngọc Thành', role: 'viewer', canViewAll: true, canExport: false },
+  ADHAI: { code: 'ADHAI', fullName: 'Nguyễn Đình Hải', role: 'viewer', canViewAll: true, canExport: false },
+  ADHA: { code: 'ADHA', fullName: 'Nguyễn Đình Hà', role: 'viewer', canViewAll: true, canExport: false },
+  ADDUC: { code: 'ADDUC', fullName: 'Nguyễn Anh Đức', role: 'viewer', canViewAll: true, canExport: false },
+  ADHUNG: { code: 'ADHUNG', fullName: 'Nguyễn Mạnh Hùng', role: 'viewer', canViewAll: true, canExport: false },
 }
 
 function normalizeIdentity(value: string): string {
@@ -146,9 +147,10 @@ function App() {
   }, [notice])
 
   const isViewer = currentUser?.role === 'viewer'
+  const canViewAll = currentUser?.canViewAll === true
 
   const creatorOptions = useMemo(() => {
-    if (isViewer && currentUser?.code) {
+    if (!canViewAll && isViewer && currentUser?.code) {
       return [currentUser.code]
     }
 
@@ -160,7 +162,7 @@ function App() {
       .forEach((creatorCode) => creators.add(creatorCode))
 
     return Array.from(creators).sort()
-  }, [currentUser?.code, customers, isViewer])
+  }, [canViewAll, currentUser?.code, customers, isViewer])
 
   const filteredCustomers = useMemo(() => {
     const keyword = normalizeSearchText(search)
@@ -170,7 +172,7 @@ function App() {
       const isMappedCreator =
         typeof creatorCode === 'string' &&
         Object.prototype.hasOwnProperty.call(CREATOR_NAME_MAP, creatorCode)
-      const matchesCurrentUser = !isViewer || matchesLoggedInUser(customer.nguoi_tao, currentUser)
+      const matchesCurrentUser = canViewAll || !isViewer || matchesLoggedInUser(customer.nguoi_tao, currentUser)
       const matchesCreator = !creatorFilter || creatorCode === creatorFilter
       const matchesDate = !dateFilter || getDateKey(customer.ngay_tao) === dateFilter
 
@@ -199,7 +201,7 @@ function App() {
         normalizeSearchText(String(field ?? '')).includes(keyword),
       )
     })
-  }, [creatorFilter, currentUser?.code, customers, dateFilter, isViewer, search])
+  }, [canViewAll, creatorFilter, currentUser, customers, dateFilter, isViewer, search])
 
   const metrics = useMemo(() => {
     const stores = new Set(customers.map((customer) => customer.npp).filter(Boolean))
@@ -268,6 +270,7 @@ function App() {
         canModify={canModify}
         currentUserCode={currentUser?.code ?? ''}
         currentUserName={currentUser?.fullName ?? ''}
+        canViewAll={currentUser?.canViewAll === true}
         canExport={currentUser?.canExport ?? false}
       />
     )
@@ -326,9 +329,9 @@ function App() {
               id="creator-filter"
               value={creatorFilter}
               onChange={(event) => setCreatorFilter(event.target.value)}
-              disabled={isViewer}
+              disabled={!canViewAll && isViewer}
             >
-              <option value="">{isViewer ? 'Tài khoản của bạn' : 'Tất cả người tạo'}</option>
+              <option value="">{!canViewAll && isViewer ? 'Tài khoản của bạn' : 'Tất cả người tạo'}</option>
               {creatorOptions.map((creatorCode) => (
                 <option key={creatorCode} value={creatorCode}>
                   {creatorCode}

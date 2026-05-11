@@ -20,6 +20,7 @@ type StoreFieldReportPageProps = {
   canModify: boolean
   currentUserCode: string
   currentUserName: string
+  canViewAll: boolean
   canExport: boolean
 }
 
@@ -162,7 +163,7 @@ const FIELD_LABELS: Record<StringField | OptionalTextField | BooleanField, strin
   DoiThuOishi: 'Oishi',
   DoiThuPoca: 'Poca',
   DoiThuKhac: 'Khác',
-  DoiThuOrion: 'Kệ đốithủ  Orion',
+  DoiThuOrion: 'Kệ đối thủ Orion',
   CoViACBT: 'Có vị',
   CoHangDoiThuVi: 'Có hàng đối thủ không',
   ViDoiThuLays: "Lay's",
@@ -345,6 +346,7 @@ export default function StoreFieldReportPage({
   canModify,
   currentUserCode,
   currentUserName,
+  canViewAll,
   canExport,
 }: StoreFieldReportPageProps) {
   const [stores, setStores] = useState<Store[]>([])
@@ -543,6 +545,7 @@ export default function StoreFieldReportPage({
       const matchesCreator = !creatorFilter || getStoreCreatorLabel(store) === creatorFilter
       const creatorLabel = getStoreCreatorLabel(store)
       const matchesCurrentUser =
+        canViewAll ||
         canModify ||
         !currentUserCode ||
         matchesLoggedInUser(creatorLabel, currentUserCode, currentUserName)
@@ -566,7 +569,7 @@ export default function StoreFieldReportPage({
 
       return matchesCreator && matchesCurrentUser && matchesDate
     })
-  }, [canModify, creatorFilter, currentUserCode, currentUserName, dateFilterMode, dateFilterValue, stores])
+  }, [canModify, canViewAll, creatorFilter, currentUserCode, currentUserName, dateFilterMode, dateFilterValue, stores])
 
   const metrics = useMemo(() => {
     const npps = new Set(filteredStores.map((store) => store.NPP).filter(Boolean))
@@ -638,9 +641,9 @@ export default function StoreFieldReportPage({
               id="store-creator-filter"
               value={creatorFilter}
               onChange={(event) => setCreatorFilter(event.target.value)}
-              disabled={!canModify}
+                disabled={!canModify && !canViewAll}
             >
-              <option value="">{canModify ? 'Tất cả người tạo' : 'Tài khoản của bạn'}</option>
+              <option value="">{canModify || canViewAll ? 'Tất cả người tạo' : 'Tài khoản của bạn'}</option>
               {creatorOptions.map((creator) => (
                 <option key={creator} value={creator}>
                   {creator}
