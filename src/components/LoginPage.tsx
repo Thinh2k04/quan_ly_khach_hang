@@ -37,7 +37,7 @@ export default function LoginPage({ onLogin, isLoading = false, error: parentErr
           <label className="login-field">
             <span>Tên đăng nhập</span>
             <input
-              type="text"
+              type="password"
               value={username}
               onChange={(e) => setUsername(e.target.value.toUpperCase())}
               placeholder="Nhập tên đăng nhập"
