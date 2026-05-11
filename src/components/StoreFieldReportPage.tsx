@@ -8,7 +8,7 @@ import {
   type Store,
   type StorePayload,
 } from '../api'
-import { formatDateToVnTime, getDateKey, resolveImageUrl } from '../utils/customerFormatters'
+import { getDateKey, resolveImageUrl } from '../utils/customerFormatters'
 import ConfirmDialog from './ConfirmDialog'
 import StoreReportModal from './StoreReportModal'
 
@@ -313,7 +313,28 @@ function formatStoreDateTime(value: unknown): string {
     return '—'
   }
 
-  return formatDateToVnTime(value)
+  const rawValue = value.trim()
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(rawValue)
+
+  if (isoMatch) {
+    const [, year, month, day, hour, minute] = isoMatch
+    return `${Number(day)}/${Number(month)}/${year} ${hour}:${minute}`
+  }
+
+  const date = new Date(rawValue)
+  if (Number.isNaN(date.getTime())) {
+    return rawValue
+  }
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(date)
 }
 
 function getWeekKey(dateKey: string): string {
