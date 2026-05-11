@@ -23,7 +23,7 @@ type AppUser = {
 }
 
 const LOGIN_USERS: Record<string, AppUser> = {
-  ACBT999: { code: 'ACBT999', fullName: 'Quản trị viên', role: 'editor', canViewAll: true, canExport: true },
+  ANCUNGBATUYET99: { code: 'ANCUNGBATUYET99', fullName: 'Quản trị viên', role: 'editor', canViewAll: true, canExport: true },
   ADTHANH: { code: 'ADTHANH', fullName: 'Ngô Ngọc Thành', role: 'viewer', canViewAll: true, canExport: false },
   ADHAI: { code: 'ADHAI', fullName: 'Nguyễn Đình Hải', role: 'viewer', canViewAll: true, canExport: false },
   ADHA: { code: 'ADHA', fullName: 'Nguyễn Đình Hà', role: 'viewer', canViewAll: true, canExport: false },
