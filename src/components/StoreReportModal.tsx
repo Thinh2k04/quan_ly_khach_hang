@@ -7,6 +7,7 @@ type StoreReportModalProps = {
   stores: Store[]
   isOpen: boolean
   onClose: () => void
+  canExport: boolean
 }
 
 type DateFilterMode = 'day' | 'week' | 'month'
@@ -202,7 +203,7 @@ function ReportBars({
   )
 }
 
-export default function StoreReportModal({ stores, isOpen, onClose }: StoreReportModalProps) {
+export default function StoreReportModal({ stores, isOpen, onClose, canExport }: StoreReportModalProps) {
   const [creatorFilter, setCreatorFilter] = useState('')
   const [chartCreatorFilter, setChartCreatorFilter] = useState('')
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('day')
@@ -810,10 +811,10 @@ export default function StoreReportModal({ stores, isOpen, onClose }: StoreRepor
           </div>
 
           <div className="toolbar__actions">
-            <button className="report-button" type="button" onClick={() => exportStoresToCsv()}>
+            <button className="report-button" type="button" onClick={() => exportStoresToCsv()} disabled={!canExport} title={!canExport ? 'Bạn không có quyền xuất dữ liệu' : ''}>
               Xuất Danh sách CH
             </button>
-            <button className="report-button" type="button" onClick={() => exportReportExcel()}>
+            <button className="report-button" type="button" onClick={() => exportReportExcel()} disabled={!canExport} title={!canExport ? 'Bạn không có quyền xuất dữ liệu' : ''}>
               Xuất Excel
             </button>
           </div>

@@ -328,6 +328,11 @@
     transform: translateY(-1px);
   }
 
+  .report-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   .notice,
   .error-banner {
     margin-bottom: 16px;

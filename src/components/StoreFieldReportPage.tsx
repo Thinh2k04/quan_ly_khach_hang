@@ -20,6 +20,7 @@ type StoreFieldReportPageProps = {
   canModify: boolean
   currentUserCode: string
   currentUserName: string
+  canExport: boolean
 }
 
 function normalizeIdentity(value: string): string {
@@ -335,6 +336,7 @@ export default function StoreFieldReportPage({
   canModify,
   currentUserCode,
   currentUserName,
+  canExport,
 }: StoreFieldReportPageProps) {
   const [stores, setStores] = useState<Store[]>([])
   const [status, setStatus] = useState<Status>('loading')
@@ -898,7 +900,7 @@ export default function StoreFieldReportPage({
         </div>
       ) : null}
 
-      <StoreReportModal stores={filteredStores} isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
+      <StoreReportModal stores={filteredStores} isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} canExport={canExport} />
       <ConfirmDialog
         isOpen={Boolean(storeToDelete)}
         title="Xác nhận xóa cửa hàng"

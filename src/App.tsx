@@ -18,15 +18,16 @@ type AppUser = {
   code: string
   fullName: string
   role: UserRole
+  canExport: boolean
 }
 
 const LOGIN_USERS: Record<string, AppUser> = {
-  ACBT999: { code: 'ACBT999', fullName: 'Quản trị viên', role: 'editor' },
-  ADTHANH: { code: 'ADTHANH', fullName: 'Ngô Ngọc Thành', role: 'viewer' },
-  ADHAI: { code: 'ADHAI', fullName: 'Nguyễn Đình Hải', role: 'viewer' },
-  ADHA: { code: 'ADHA', fullName: 'Nguyễn Đình Hà', role: 'viewer' },
-  ADDUC: { code: 'ADDUC', fullName: 'Nguyễn Anh Đức', role: 'viewer' },
-  ADHUNG: { code: 'ADHUNG', fullName: 'Nguyễn Mạnh Hùng', role: 'viewer' },
+  ACBT999: { code: 'ACBT999', fullName: 'Quản trị viên', role: 'editor', canExport: true },
+  ADTHANH: { code: 'ADTHANH', fullName: 'Ngô Ngọc Thành', role: 'viewer', canExport: false },
+  ADHAI: { code: 'ADHAI', fullName: 'Nguyễn Đình Hải', role: 'viewer', canExport: false },
+  ADHA: { code: 'ADHA', fullName: 'Nguyễn Đình Hà', role: 'viewer', canExport: false },
+  ADDUC: { code: 'ADDUC', fullName: 'Nguyễn Anh Đức', role: 'viewer', canExport: false },
+  ADHUNG: { code: 'ADHUNG', fullName: 'Nguyễn Mạnh Hùng', role: 'viewer', canExport: false },
 }
 
 function normalizeIdentity(value: string): string {
@@ -267,6 +268,7 @@ function App() {
         canModify={canModify}
         currentUserCode={currentUser?.code ?? ''}
         currentUserName={currentUser?.fullName ?? ''}
+        canExport={currentUser?.canExport ?? false}
       />
     )
   }
