@@ -333,8 +333,9 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
           total,
           coTrenDms: `${dmsCount} (${formatPercent(dmsCount, total)})`,
           coKeAcbt: `${keAcbtCount} (${formatPercent(keAcbtCount, total)})`,
-          traThuongTb: `${traThuongCount} (${formatPercent(traThuongCount, total)})`,
-          hangDoiThuKe: `${doiThuKeCount} (${formatPercent(doiThuKeCount, total)})`,
+          // Percent for "Trả thưởng TB" and "Có hàng đối thủ" should be relative to "Có kệ" (keAcbtCount)
+          traThuongTb: `${traThuongCount} (${formatPercent(traThuongCount, keAcbtCount)})`,
+          hangDoiThuKe: `${doiThuKeCount} (${formatPercent(doiThuKeCount, keAcbtCount)})`,
           keLays: `${keLaysCount} (${formatPercent(keLaysCount, total)})`,
           keOishi: `${keOishiCount} (${formatPercent(keOishiCount, total)})`,
           keOrion: `${keOrionCount} (${formatPercent(keOrionCount, total)})`,
