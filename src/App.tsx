@@ -243,7 +243,7 @@ function App() {
 
     try {
       await deleteCustomer(customer.id)
-      setCustomers((current) => current.filter((item) => item.id !== customer.id))
+      await loadCustomers(true)
       setNotice(`Đã xóa khách hàng ${customer.ten}`)
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Không thể xóa khách hàng')
