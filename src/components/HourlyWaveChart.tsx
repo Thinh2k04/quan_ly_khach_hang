@@ -61,13 +61,13 @@ export default function HourlyWaveChart({ points }: HourlyWaveChartProps) {
       <svg className="wave-chart__svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Biểu đồ sóng theo giờ">
         <defs>
           <linearGradient id="waveFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.04" />
+            <stop offset="0%" stopColor="#fb923c" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#fb923c" stopOpacity="0.04" />
           </linearGradient>
           <linearGradient id="waveStroke" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#22d3ee" />
-            <stop offset="50%" stopColor="#0ea5e9" />
-            <stop offset="100%" stopColor="#38bdf8" />
+            <stop offset="0%" stopColor="#fdba74" />
+            <stop offset="50%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#ea580c" />
           </linearGradient>
         </defs>
 

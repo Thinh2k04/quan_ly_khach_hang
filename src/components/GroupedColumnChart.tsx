@@ -27,7 +27,7 @@ export default function GroupedColumnChart({ categories, series, height = 240, c
   // compute totals per category to render percentages
   const totals = categories.map((_, gi) => series.reduce((acc, s) => acc + (s.values[gi] ?? 0), 0))
 
-  const palette = ['#2563eb', '#ef4444', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6', '#ef6aa7', '#14b8a6']
+  const palette = ['#ea580c', '#fb923c', '#f97316', '#fdba74', '#c2410c', '#f59e0b', '#ea7c2a', '#fbbf24']
 
   const ticks = 4
   const tickValues = Array.from({ length: ticks + 1 }, (_, i) => Math.round((i * max) / ticks))

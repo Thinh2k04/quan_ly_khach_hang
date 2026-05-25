@@ -9,6 +9,7 @@ import {
   type StorePayload,
 } from '../api'
 import { getDateKey, resolveImageUrl } from '../utils/customerFormatters'
+import { getLocationKey } from '../utils/locationNormalizer'
 import ConfirmDialog from './ConfirmDialog'
 import StoreReportModal from './StoreReportModal'
 
@@ -448,7 +449,7 @@ export default function StoreFieldReportPage({
     return () => clearTimeout(handle)
   }, [search])
 
-  
+
 
   const openEditForm = (store: Store) => {
     if (!canModify) {
@@ -594,14 +595,16 @@ export default function StoreFieldReportPage({
 
   const metrics = useMemo(() => {
     const npps = new Set(filteredStores.map((store) => store.NPP).filter(Boolean))
-    const provinces = new Set(filteredStores.map((store) => store.Tinh).filter(Boolean))
-    const hasCompetitor = filteredStores.filter((store) => Boolean(store.CoHangDoiThuKhong)).length
+    const provinces = new Set(filteredStores.map((store) => getLocationKey(store.Tinh)))
+    const hasAcbtRack = filteredStores.filter((store) => Boolean(store.CoKeACBT)).length
+    const hasHangingRack = filteredStores.filter((store) => Boolean(store.CoViACBT)).length
 
     return {
       total: filteredStores.length,
       npps: npps.size,
       provinces: provinces.size,
-      hasCompetitor,
+      hasAcbtRack,
+      hasHangingRack,
     }
   }, [filteredStores])
 
@@ -631,9 +634,18 @@ export default function StoreFieldReportPage({
           <span>Tỉnh/Thành</span>
           <strong>{metrics.provinces}</strong>
         </article>
-        <article className="stat-card">
-          <span>Có hàng đối thủ</span>
-          <strong>{metrics.hasCompetitor}</strong>
+        <article className="stat-card stat-card--split" aria-label="Kệ ACBT và vỉ treo">
+          <div className="stat-card__split">
+            <div className="stat-card__split-item">
+              <span>Có kệ ACBT</span>
+              <strong>{metrics.hasAcbtRack}</strong>
+            </div>
+            <div className="stat-card__split-divider" aria-hidden="true" />
+            <div className="stat-card__split-item">
+              <span>Có vỉ treo</span>
+              <strong>{metrics.hasHangingRack}</strong>
+            </div>
+          </div>
         </article>
       </section>
 
@@ -662,7 +674,7 @@ export default function StoreFieldReportPage({
               id="store-creator-filter"
               value={creatorFilter}
               onChange={(event) => setCreatorFilter(event.target.value)}
-                disabled={!canModify && !canViewAll}
+              disabled={!canModify && !canViewAll}
             >
               <option value="">{canModify || canViewAll ? 'Tất cả người tạo' : 'Tài khoản của bạn'}</option>
               {creatorOptions.map((creator) => (
@@ -704,7 +716,7 @@ export default function StoreFieldReportPage({
           <button className="report-button" type="button" onClick={onBack}>
             Về khách hàng
           </button>
-          
+
           <button className="report-button" type="button" onClick={() => setIsReportOpen(true)}>
             Báo cáo
           </button>
@@ -977,7 +989,13 @@ export default function StoreFieldReportPage({
         </div>
       ) : null}
 
-      <StoreReportModal stores={filteredStores} isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} canExport={canExport} />
+      <StoreReportModal
+        stores={filteredStores}
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        canExport={canExport}
+        canManagePlan={currentUserCode === '99'}
+      />
       <ConfirmDialog
         isOpen={Boolean(storeToDelete)}
         title="Xác nhận xóa cửa hàng"

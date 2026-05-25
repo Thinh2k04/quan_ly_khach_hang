@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Store } from '../api'
+import { getLocationKey, getLocationLabel } from '../utils/locationNormalizer'
 import PieChart from './PieChart'
 
 type StoreReportModalProps = {
@@ -7,6 +8,7 @@ type StoreReportModalProps = {
   isOpen: boolean
   onClose: () => void
   canExport: boolean
+  canManagePlan: boolean
 }
 
 type DateFilterMode = 'day' | 'week' | 'month'
@@ -21,6 +23,8 @@ type ReportPoint = {
 type StorePercentRow = {
   creator: string
   total: number
+  keHoach: number
+  tyLeKeHoach: string
   coTrenDms: string
   coKeAcbt: string
   traThuongTb: string
@@ -47,6 +51,67 @@ type StorePercentRow = {
   bimKhoKhac: string
   bimUotAcbt: string
   bimUotDoiThu: string
+}
+
+type MonthlyPlanMap = Record<string, Record<string, number>>
+
+const PLAN_STORAGE_KEY = 'store-report-monthly-plans-v1'
+
+function getCurrentMonthKey(): string {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+
+function normalizePlanValue(value: number): number {
+  if (!Number.isFinite(value) || value < 0) {
+    return 0
+  }
+
+  return Math.round(value)
+}
+
+function loadMonthlyPlans(): MonthlyPlanMap {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+
+  try {
+    const raw = window.localStorage.getItem(PLAN_STORAGE_KEY)
+
+    if (!raw) {
+      return {}
+    }
+
+    const parsed = JSON.parse(raw) as unknown
+
+    if (!parsed || typeof parsed !== 'object') {
+      return {}
+    }
+
+    const result: MonthlyPlanMap = {}
+
+    Object.entries(parsed as Record<string, unknown>).forEach(([month, creators]) => {
+      if (!creators || typeof creators !== 'object') {
+        return
+      }
+
+      const monthData: Record<string, number> = {}
+
+      Object.entries(creators as Record<string, unknown>).forEach(([creator, value]) => {
+        if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+          monthData[creator] = normalizePlanValue(value)
+        }
+      })
+
+      result[month] = monthData
+    })
+
+    return result
+  } catch {
+    return {}
+  }
 }
 
 function getCreatorLabel(store: Store): string {
@@ -109,20 +174,20 @@ function getStoreCreatedAt(store: Store): string {
 
   const value = rawDate
   const isoMatch = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(value)
-  
+
   if (isoMatch) {
     const [, yearStr, monthStr, dayStr, hourStr, minuteStr] = isoMatch
-    
+
     // Parse as UTC and convert to VN timezone
     const date = new Date(`${yearStr}-${monthStr}-${dayStr}T${hourStr}:${minuteStr}:00Z`)
     const vnDate = new Date(date.getTime() + 7 * 60 * 60 * 1000)
-    
+
     const vnYear = vnDate.getUTCFullYear()
     const vnMonth = vnDate.getUTCMonth() + 1
     const vnDay = vnDate.getUTCDate()
     const vnHour = String(vnDate.getUTCHours()).padStart(2, '0')
     const vnMinute = String(vnDate.getUTCMinutes()).padStart(2, '0')
-    
+
     return `${vnHour}:${vnMinute} ${vnDay} thg ${vnMonth}, ${vnYear}`
   }
 
@@ -219,16 +284,52 @@ function ReportBars({
   )
 }
 
-export default function StoreReportModal({ stores, isOpen, onClose, canExport }: StoreReportModalProps) {
+export default function StoreReportModal({ stores, isOpen, onClose, canExport, canManagePlan }: StoreReportModalProps) {
   const [creatorFilter, setCreatorFilter] = useState('')
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('day')
   const [dateFilterValue, setDateFilterValue] = useState('')
   const [dmsFilter, setDmsFilter] = useState<'all' | 'co' | 'chua'>('all')
+  const [planMonth, setPlanMonth] = useState(getCurrentMonthKey())
+  const [isPlanPanelOpen, setIsPlanPanelOpen] = useState(false)
+  const [monthlyPlans, setMonthlyPlans] = useState<MonthlyPlanMap>(() => loadMonthlyPlans())
   const dragScrollRef = useRef({ isDragging: false, startX: 0, startScrollLeft: 0 })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(monthlyPlans))
+  }, [monthlyPlans])
+
+  const monthPlans = useMemo(() => monthlyPlans[planMonth] ?? {}, [monthlyPlans, planMonth])
 
   const creatorOptions = useMemo(() => {
     return Array.from(new Set(stores.map(getCreatorLabel))).sort((a, b) => a.localeCompare(b))
   }, [stores])
+
+  const creatorPlanOptions = useMemo(() => {
+    return Array.from(new Set([...creatorOptions, ...Object.keys(monthPlans)])).sort((a, b) => a.localeCompare(b))
+  }, [creatorOptions, monthPlans])
+
+  const setCreatorPlan = (creator: string, planValue: number) => {
+    const safeValue = normalizePlanValue(planValue)
+
+    setMonthlyPlans((previous) => {
+      const monthData = { ...(previous[planMonth] ?? {}) }
+
+      if (safeValue === 0) {
+        delete monthData[creator]
+      } else {
+        monthData[creator] = safeValue
+      }
+
+      return {
+        ...previous,
+        [planMonth]: monthData,
+      }
+    })
+  }
 
   const filteredStores = useMemo(() => {
     return stores.filter((store) => {
@@ -272,21 +373,30 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
   }, [filteredStores])
 
   const byProvince = useMemo(() => {
-    const map = new Map<string, number>()
+    const map = new Map<string, { label: string; value: number }>()
 
     filteredStores.forEach((store) => {
-      const province = typeof store.Tinh === 'string' && store.Tinh.trim() ? store.Tinh.trim() : 'Chưa rõ'
-      map.set(province, (map.get(province) ?? 0) + 1)
+      const key = getLocationKey(store.Tinh)
+      const current = map.get(key)
+
+      if (current) {
+        current.value += 1
+        return
+      }
+
+      map.set(key, {
+        label: getLocationLabel(store.Tinh),
+        value: 1,
+      })
     })
 
-    return Array.from(map.entries())
-      .map(([label, value]) => ({ label, value }))
+    return Array.from(map.values())
       .sort((a, b) => b.value - a.value)
       .slice(0, 10)
   }, [filteredStores])
 
-  const hasCompetitor = filteredStores.filter((store) => Boolean(store.CoHangDoiThuKhong)).length
   const hasACBTRack = filteredStores.filter((store) => Boolean(store.CoKeACBT)).length
+  const hasHangingRack = filteredStores.filter((store) => Boolean(store.CoViACBT)).length
 
   const percentRows = useMemo<StorePercentRow[]>(() => {
     const buckets = new Map<string, Store[]>()
@@ -301,6 +411,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
     return Array.from(buckets.entries())
       .map(([creator, creatorStores]) => {
         const total = creatorStores.length
+        const keHoach = monthPlans[creator] ?? 0
         const dmsCount = countTruthy(creatorStores, 'CoTrenDMS')
         const keAcbtCount = countTruthy(creatorStores, 'CoKeACBT')
         const traThuongCount = countTruthy(creatorStores, 'TraThuongTB')
@@ -331,6 +442,8 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
         return {
           creator,
           total,
+          keHoach,
+          tyLeKeHoach: formatPercent(total, keHoach),
           coTrenDms: `${dmsCount} (${formatPercent(dmsCount, total)})`,
           coKeAcbt: `${keAcbtCount} (${formatPercent(keAcbtCount, total)})`,
           // Percent for "Trả thưởng TB" and "Có hàng đối thủ" should be relative to "Có kệ" (keAcbtCount)
@@ -361,13 +474,86 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
         }
       })
       .sort((a, b) => b.total - a.total)
-  }, [filteredStores])
+  }, [filteredStores, monthPlans])
 
   // Helper function to extract count from percentage string (e.g., "10 (50%)" → 10)
   const extractCount = (text: string): number => {
     const match = /^\s*(\d+)\b/.exec(String(text))
     return match ? Number(match[1]) : 0
   }
+
+  const tableTotals = useMemo(() => {
+    const metrics = {
+      coTrenDms: 0,
+      coKeAcbt: 0,
+      traThuongTb: 0,
+      hangDoiThuKe: 0,
+      keLays: 0,
+      keOishi: 0,
+      keOrion: 0,
+      kePoca: 0,
+      keKhac: 0,
+      viAcbt: 0,
+      hangDoiThuVi: 0,
+      viLays: 0,
+      viOishi: 0,
+      viOrion: 0,
+      viPoca: 0,
+      viKhac: 0,
+      chanGaAcbt: 0,
+      chanGaDoiThu: 0,
+      bimKhoAcbt: 0,
+      bimKhoLays: 0,
+      bimKhoOishi: 0,
+      bimKhoOrion: 0,
+      bimKhoPoca: 0,
+      bimKhoKhac: 0,
+      bimUotAcbt: 0,
+      bimUotDoiThu: 0,
+    }
+
+    let totalStores = 0
+    let totalPlans = 0
+
+    percentRows.forEach((row) => {
+      totalStores += row.total
+      totalPlans += row.keHoach
+
+      metrics.coTrenDms += extractCount(row.coTrenDms)
+      metrics.coKeAcbt += extractCount(row.coKeAcbt)
+      metrics.traThuongTb += extractCount(row.traThuongTb)
+      metrics.hangDoiThuKe += extractCount(row.hangDoiThuKe)
+      metrics.keLays += extractCount(row.keLays)
+      metrics.keOishi += extractCount(row.keOishi)
+      metrics.keOrion += extractCount(row.keOrion)
+      metrics.kePoca += extractCount(row.kePoca)
+      metrics.keKhac += extractCount(row.keKhac)
+      metrics.viAcbt += extractCount(row.viAcbt)
+      metrics.hangDoiThuVi += extractCount(row.hangDoiThuVi)
+      metrics.viLays += extractCount(row.viLays)
+      metrics.viOishi += extractCount(row.viOishi)
+      metrics.viOrion += extractCount(row.viOrion)
+      metrics.viPoca += extractCount(row.viPoca)
+      metrics.viKhac += extractCount(row.viKhac)
+      metrics.chanGaAcbt += extractCount(row.chanGaAcbt)
+      metrics.chanGaDoiThu += extractCount(row.chanGaDoiThu)
+      metrics.bimKhoAcbt += extractCount(row.bimKhoAcbt)
+      metrics.bimKhoLays += extractCount(row.bimKhoLays)
+      metrics.bimKhoOishi += extractCount(row.bimKhoOishi)
+      metrics.bimKhoOrion += extractCount(row.bimKhoOrion)
+      metrics.bimKhoPoca += extractCount(row.bimKhoPoca)
+      metrics.bimKhoKhac += extractCount(row.bimKhoKhac)
+      metrics.bimUotAcbt += extractCount(row.bimUotAcbt)
+      metrics.bimUotDoiThu += extractCount(row.bimUotDoiThu)
+    })
+
+    return {
+      totalStores,
+      totalPlans,
+      tyLeKeHoach: formatPercent(totalStores, totalPlans),
+      metrics,
+    }
+  }, [percentRows])
 
   // Compute chart data based on creatorFilter
   const chartDmsKeData = useMemo<ReportPoint[]>(() => {
@@ -544,7 +730,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
   const exportReportExcel = () => {
     if (percentRows.length === 0) return
 
-    type MetricKey = keyof Omit<StorePercentRow, 'creator' | 'total'>
+    type MetricKey = keyof Omit<StorePercentRow, 'creator' | 'total' | 'keHoach' | 'tyLeKeHoach'>
 
     const metricGroups: Array<{ title: string; items: Array<{ key: MetricKey; label: string }> }> = [
       {
@@ -591,6 +777,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
 
     const flatMetrics = metricGroups.flatMap((group) => group.items)
     const totalSurvey = percentRows.reduce((sum, row) => sum + row.total, 0)
+    const totalPlan = percentRows.reduce((sum, row) => sum + row.keHoach, 0)
 
     function extractCount(text: string): number {
       const match = /^\s*(\d+)\b/.exec(String(text))
@@ -609,6 +796,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
     const headerTop = `
       <tr>
         <th rowspan="3" class="sticky-col">Tên người thực hiện</th>
+        <th rowspan="3">Kế hoạch tháng</th>
         <th rowspan="3">Tổng số CH<br/>Khảo sát</th>
         <th rowspan="3">Có trên<br/>DMS</th>
         <th colspan="8">Kệ Trưng Bày</th>
@@ -630,8 +818,8 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
     const headerBottom = `
       <tr>
         ${flatMetrics
-          .map((metric) => `<th>${metric.label}</th>`)
-          .join('')}
+        .map((metric) => `<th>${metric.label}</th>`)
+        .join('')}
       </tr>`
 
     const bodyRows = percentRows
@@ -639,12 +827,14 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
         const countCells = flatMetrics.map((metric) => renderCell(extractCount(String(row[metric.key])))).join('')
         const percentCells = flatMetrics.map((metric) => renderCell(extractPercent(String(row[metric.key])))).join('')
 
-        const surveyCell = `<td class="survey-cell" rowspan="2">${row.total}</td>`
+        const surveyCell = `<td class="survey-cell" rowspan="2">${row.total} (${row.tyLeKeHoach})</td>`
         const creatorCell = `<td class="creator-cell" rowspan="2">${row.creator}</td>`
+        const planCell = `<td rowspan="2">${row.keHoach}</td>`
 
         return `
           <tr class="count-row">
             ${creatorCell}
+            ${planCell}
             ${surveyCell}
             ${renderCell(extractCount(String(row.coTrenDms)), 'count-primary')}
             ${countCells}
@@ -715,11 +905,13 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
     })
 
     const totalPercent = (value: number) => (totalSurvey ? `${Math.round((value / totalSurvey) * 100)}%` : '0%')
+    const totalPlanPercent = totalPlan ? `${Math.round((totalSurvey / totalPlan) * 100)}%` : '0%'
 
     const totalRowCounts = `
       <tr class="total-row count-row">
         <td class="creator-cell total-label">Tổng</td>
-        <td class="survey-cell total-value">${totalSurvey}</td>
+        ${renderCell(totalPlan, 'total-value')}
+        <td class="survey-cell total-value">${totalSurvey} (${totalPlanPercent})</td>
         <td class="count-primary total-value">${totalMetrics.coTrenDms}</td>
         ${flatMetrics.map((metric) => renderCell(totalMetrics[metric.key], 'total-value')).join('')}
       </tr>`
@@ -727,23 +919,26 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
     const totalRowPercents = `
       <tr class="total-row percent-row">
         <td class="creator-cell total-label"></td>
+        ${renderCell('', 'total-value')}
         <td class="survey-cell total-value"></td>
         <td class="percent-primary total-value">${totalPercent(totalMetrics.coTrenDms)}</td>
         ${flatMetrics.map((metric) => renderCell(totalPercent(totalMetrics[metric.key]), 'total-value')).join('')}
       </tr>`
 
+    const columnCount = flatMetrics.length + 4
+
     const filterSummary = `
-      <tr><td colspan="27" class="meta-row">Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}</td></tr>
-      <tr><td colspan="27" class="meta-row">Người tạo: ${creatorFilter || 'Tất cả'}</td></tr>
-      <tr><td colspan="27" class="meta-row">Khoảng thời gian: ${
-        dateFilterValue
-          ? dateFilterMode === 'day'
-            ? `Ngày ${dateFilterValue}`
-            : dateFilterMode === 'week'
-              ? `Tuần ${dateFilterValue}`
-              : `Tháng ${dateFilterValue}`
-          : 'Tất cả'
-      }</td></tr>`
+      <tr><td colspan="${columnCount}" class="meta-row">Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}</td></tr>
+      <tr><td colspan="${columnCount}" class="meta-row">Người tạo: ${creatorFilter || 'Tất cả'}</td></tr>
+      <tr><td colspan="${columnCount}" class="meta-row">Khoảng thời gian: ${dateFilterValue
+        ? dateFilterMode === 'day'
+          ? `Ngày ${dateFilterValue}`
+          : dateFilterMode === 'week'
+            ? `Tuần ${dateFilterValue}`
+            : `Tháng ${dateFilterValue}`
+        : 'Tất cả'
+      }</td></tr>
+      <tr><td colspan="${columnCount}" class="meta-row">Kế hoạch tháng áp dụng: ${planMonth}</td></tr>`
 
     const html = `<!doctype html>
     <html>
@@ -751,16 +946,16 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <style>
           @page { size: landscape; margin: 12mm; }
-          body { font-family: Calibri, Arial, sans-serif; background: #fff; color: #111827; }
+          body { font-family: 'Times New Roman', Times, serif; background: #fff; color: #111827; }
           table { border-collapse: collapse; width: 100%; table-layout: fixed; }
           th, td { border: 1px solid #0f172a; text-align: center; vertical-align: middle; padding: 4px 6px; word-wrap: break-word; }
-          th { background: #0b6fb7; color: #fff; font-weight: 700; }
+          th { background: #ea580c; color: #fff; font-weight: 700; }
           .meta-row { text-align: left; font-size: 12px; background: #f8fafc; font-style: italic; }
           .creator-cell { text-align: left; font-weight: 700; }
           .sticky-col { min-width: 160px; }
           .survey-cell { min-width: 90px; }
           .count-primary { font-weight: 700; }
-          .percent-primary { color: #2563eb; }
+          .percent-primary { color: #ea580c; }
           .count-row td { height: 28px; }
           .percent-row td { height: 26px; font-size: 12px; color: #0f172a; }
           .total-row td { font-weight: 700; color: #dc2626; }
@@ -808,14 +1003,13 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
     const filterSummary = [
       `Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}`,
       `Người tạo: ${creatorFilter || 'Tất cả'}`,
-      `Khoảng thời gian: ${
-        dateFilterValue
-          ? dateFilterMode === 'day'
-            ? `Ngày ${dateFilterValue}`
-            : dateFilterMode === 'week'
-              ? `Tuần ${dateFilterValue}`
-              : `Tháng ${dateFilterValue}`
-          : 'Tất cả'
+      `Khoảng thời gian: ${dateFilterValue
+        ? dateFilterMode === 'day'
+          ? `Ngày ${dateFilterValue}`
+          : dateFilterMode === 'week'
+            ? `Tuần ${dateFilterValue}`
+            : `Tháng ${dateFilterValue}`
+        : 'Tất cả'
       }`,
       `Tổng cửa hàng xuất: ${filteredStores.length}`,
     ]
@@ -843,14 +1037,14 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <style>
           @page { size: landscape; margin: 12mm; }
-          body { font-family: Calibri, Arial, sans-serif; background: #ffffff; color: #111827; }
+          body { font-family: 'Times New Roman', Times, serif; background: #ffffff; color: #111827; }
           .sheet-title { font-size: 20px; font-weight: 700; text-align: center; color: #0f172a; margin: 0 0 4px; }
           .sheet-subtitle { font-size: 12px; text-align: center; color: #64748b; margin: 0 0 12px; }
           .meta { display: grid; grid-template-columns: 1fr; gap: 4px; margin: 0 0 12px; }
           .meta-item { font-size: 12px; color: #334155; padding: 4px 8px; background: #f8fafc; border: 1px solid #cbd5e1; }
           table { width: 100%; border-collapse: collapse; table-layout: fixed; }
           th, td { border: 1px solid #1e3a5f; padding: 6px 8px; font-size: 12px; }
-          th { background: #0b6fb7; color: #fff; font-weight: 700; text-align: center; }
+          th { background: #ea580c; color: #fff; font-weight: 700; text-align: center; }
           td { background: #fff; }
           .even-row td { background: #f8fbff; }
           .odd-row td { background: #ffffff; }
@@ -962,6 +1156,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
                 value={dateFilterValue}
                 onChange={(event) => setDateFilterValue(event.target.value)}
               />
+            </label>
 
             <label className="combo-box" htmlFor="store-report-dms">
               <span>Có trên DMS</span>
@@ -975,11 +1170,14 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
                 <option value="chua">Chưa có</option>
               </select>
             </label>
-
-            </label>
           </div>
 
           <div className="toolbar__actions">
+            {canManagePlan ? (
+              <button className="report-button" type="button" onClick={() => setIsPlanPanelOpen((previous) => !previous)}>
+                {isPlanPanelOpen ? 'Ẩn kế hoạch tháng' : 'Kế hoạch tháng'}
+              </button>
+            ) : null}
             <button className="report-button" type="button" onClick={() => exportStoresToCsv()} disabled={!canExport} title={!canExport ? 'Bạn không có quyền xuất dữ liệu' : ''}>
               Xuất Danh sách CH
             </button>
@@ -988,6 +1186,42 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
             </button>
           </div>
         </section>
+
+        {canManagePlan && isPlanPanelOpen ? (
+          <section className="report-plan-panel" aria-label="Kế hoạch theo tháng">
+            <div className="report-plan-panel__header">
+              <strong>Thiết lập kế hoạch theo tháng</strong>
+              <label className="combo-box" htmlFor="plan-month-selector">
+                <span>Tháng kế hoạch</span>
+                <input
+                  id="plan-month-selector"
+                  type="month"
+                  value={planMonth}
+                  onChange={(event) => setPlanMonth(event.target.value || getCurrentMonthKey())}
+                />
+              </label>
+            </div>
+
+            {creatorPlanOptions.length === 0 ? (
+              <p className="report-empty">Chưa có người tạo để thiết lập kế hoạch.</p>
+            ) : (
+              <div className="report-plan-grid">
+                {creatorPlanOptions.map((creator) => (
+                  <label className="report-plan-item" key={creator}>
+                    <span>{creator}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={monthPlans[creator] ?? 0}
+                      onChange={(event) => setCreatorPlan(creator, Number(event.target.value))}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
 
         <div className="report-kpis">
           <article className="report-kpi-card">
@@ -999,8 +1233,8 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
             <strong>{hasACBTRack}</strong>
           </article>
           <article className="report-kpi-card">
-            <span>Có hàng đối thủ</span>
-            <strong>{hasCompetitor}</strong>
+            <span>Có vỉ treo</span>
+            <strong>{hasHangingRack}</strong>
           </article>
         </div>
 
@@ -1027,6 +1261,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
                   <thead>
                     <tr>
                       <th rowSpan={3}>Người tạo</th>
+                      <th rowSpan={3}>Kế hoạch tháng</th>
                       <th rowSpan={3}>Tổng CH</th>
                       <th rowSpan={3}>Có trên DMS</th>
                       <th colSpan={8}>Kệ Trưng Bày</th>
@@ -1074,7 +1309,8 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
                     {percentRows.map((row) => (
                       <tr key={row.creator}>
                         <td>{row.creator}</td>
-                        <td>{row.total}</td>
+                        <td>{row.keHoach}</td>
+                        <td>{`${row.total} (${row.tyLeKeHoach})`}</td>
                         <td>{row.coTrenDms}</td>
                         <td>{row.coKeAcbt}</td>
                         <td>{row.traThuongTb}</td>
@@ -1103,6 +1339,37 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport }:
                         <td>{row.bimUotDoiThu}</td>
                       </tr>
                     ))}
+                    <tr className="report-percent-table__total-row">
+                      <td>Tổng</td>
+                      <td>{tableTotals.totalPlans}</td>
+                      <td>{`${tableTotals.totalStores} (${tableTotals.tyLeKeHoach})`}</td>
+                      <td>{`${tableTotals.metrics.coTrenDms} (${formatPercent(tableTotals.metrics.coTrenDms, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.coKeAcbt} (${formatPercent(tableTotals.metrics.coKeAcbt, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.traThuongTb} (${formatPercent(tableTotals.metrics.traThuongTb, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.hangDoiThuKe} (${formatPercent(tableTotals.metrics.hangDoiThuKe, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.keLays} (${formatPercent(tableTotals.metrics.keLays, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.keOishi} (${formatPercent(tableTotals.metrics.keOishi, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.keOrion} (${formatPercent(tableTotals.metrics.keOrion, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.kePoca} (${formatPercent(tableTotals.metrics.kePoca, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.keKhac} (${formatPercent(tableTotals.metrics.keKhac, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.viAcbt} (${formatPercent(tableTotals.metrics.viAcbt, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.hangDoiThuVi} (${formatPercent(tableTotals.metrics.hangDoiThuVi, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.viLays} (${formatPercent(tableTotals.metrics.viLays, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.viOishi} (${formatPercent(tableTotals.metrics.viOishi, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.viOrion} (${formatPercent(tableTotals.metrics.viOrion, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.viPoca} (${formatPercent(tableTotals.metrics.viPoca, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.viKhac} (${formatPercent(tableTotals.metrics.viKhac, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.chanGaAcbt} (${formatPercent(tableTotals.metrics.chanGaAcbt, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.chanGaDoiThu} (${formatPercent(tableTotals.metrics.chanGaDoiThu, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.bimKhoAcbt} (${formatPercent(tableTotals.metrics.bimKhoAcbt, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.bimKhoLays} (${formatPercent(tableTotals.metrics.bimKhoLays, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.bimKhoOishi} (${formatPercent(tableTotals.metrics.bimKhoOishi, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.bimKhoOrion} (${formatPercent(tableTotals.metrics.bimKhoOrion, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.bimKhoPoca} (${formatPercent(tableTotals.metrics.bimKhoPoca, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.bimKhoKhac} (${formatPercent(tableTotals.metrics.bimKhoKhac, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.bimUotAcbt} (${formatPercent(tableTotals.metrics.bimUotAcbt, tableTotals.totalStores)})`}</td>
+                      <td>{`${tableTotals.metrics.bimUotDoiThu} (${formatPercent(tableTotals.metrics.bimUotDoiThu, tableTotals.totalStores)})`}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>

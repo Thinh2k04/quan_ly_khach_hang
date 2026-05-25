@@ -23,7 +23,7 @@ type AppUser = {
 }
 
 const LOGIN_USERS: Record<string, AppUser> = {
-  ANCUNGBATUYET99: { code: 'ANCUNGBATUYET99', fullName: 'Quản trị viên', role: 'editor', canViewAll: true, canExport: true },
+  '99': { code: '99', fullName: 'Quản trị viên', role: 'editor', canViewAll: true, canExport: true },
   ADTHANH: { code: 'ADTHANH', fullName: 'Ngô Ngọc Thành', role: 'viewer', canViewAll: true, canExport: false },
   ADHAI: { code: 'ADHAI', fullName: 'Nguyễn Đình Hải', role: 'viewer', canViewAll: true, canExport: false },
   ADHA: { code: 'ADHA', fullName: 'Nguyễn Đình Hà', role: 'viewer', canViewAll: true, canExport: false },
@@ -204,14 +204,19 @@ function App() {
   }, [canViewAll, creatorFilter, currentUser, customers, dateFilter, isViewer, search])
 
   const metrics = useMemo(() => {
-    const stores = new Set(customers.map((customer) => customer.npp).filter(Boolean))
-    const categories = new Set(customers.map((customer) => customer.loai).filter(Boolean))
+    const categoryList = Array.from(
+      new Set(
+        customers
+          .map((customer) => (typeof customer.loai === 'string' ? customer.loai.trim() : ''))
+          .filter((value): value is string => Boolean(value)),
+      ),
+    ).sort((a, b) => a.localeCompare(b, 'vi'))
     const todayCreated = customers.filter((customer) => sameDay(customer.ngay_tao)).length
 
     return {
       total: customers.length,
-      stores: stores.size,
-      categories: categories.size,
+      categories: categoryList.length,
+      categoryList,
       todayCreated,
     }
   }, [customers])
@@ -301,12 +306,11 @@ function App() {
           <strong>{metrics.todayCreated}</strong>
         </article>
         <article className="stat-card">
-          <span>NPP khác nhau</span>
-          <strong>{metrics.stores}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Loại khách hàng</span>
+          <span>Loại khách hàng hiện có</span>
           <strong>{metrics.categories}</strong>
+          <p className="stat-card__meta">
+            {metrics.categoryList.length > 0 ? metrics.categoryList.join(', ') : 'Chưa có dữ liệu loại khách hàng'}
+          </p>
         </article>
       </section>
 
