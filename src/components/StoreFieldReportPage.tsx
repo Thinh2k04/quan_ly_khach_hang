@@ -44,7 +44,7 @@ function matchesLoggedInUser(rawCreator: string | undefined, currentUserCode: st
   return creator === code || creator === name
 }
 
-type DateFilterMode = 'day' | 'week' | 'month'
+type DateFilterMode = 'day' | 'week' | 'month' | 'range'
 
 type StringField = 'TenCH' | 'DiaChi' | 'Phuong' | 'NPP' | 'Tinh'
 type OptionalTextField = 'GhiChu' | 'HinhAnh'
@@ -379,6 +379,8 @@ export default function StoreFieldReportPage({
   const [creatorFilter, setCreatorFilter] = useState('')
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('day')
   const [dateFilterValue, setDateFilterValue] = useState('')
+  const [dateRangeFrom, setDateRangeFrom] = useState('')
+  const [dateRangeTo, setDateRangeTo] = useState('')
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<number | null>(null)
   const [editingStore, setEditingStore] = useState<Store | null>(null)
@@ -573,7 +575,31 @@ export default function StoreFieldReportPage({
         matchesLoggedInUser(creatorLabel, currentUserCode, currentUserName)
       const dateKey = getStoreDateKey(store)
 
-      const matchesDate = !dateFilterValue || (() => {
+      const matchesDate = (() => {
+        if (dateFilterMode === 'range') {
+          if (!dateRangeFrom && !dateRangeTo) {
+            return true
+          }
+
+          if (!dateKey) {
+            return false
+          }
+
+          if (dateRangeFrom && dateKey < dateRangeFrom) {
+            return false
+          }
+
+          if (dateRangeTo && dateKey > dateRangeTo) {
+            return false
+          }
+
+          return true
+        }
+
+        if (!dateFilterValue) {
+          return true
+        }
+
         if (!dateKey) {
           return false
         }
@@ -591,7 +617,7 @@ export default function StoreFieldReportPage({
 
       return matchesCreator && matchesCurrentUser && matchesDate
     })
-  }, [canModify, canViewAll, creatorFilter, currentUserCode, currentUserName, dateFilterMode, dateFilterValue, stores])
+  }, [canModify, canViewAll, creatorFilter, currentUserCode, currentUserName, dateFilterMode, dateFilterValue, dateRangeFrom, dateRangeTo, stores])
 
   const metrics = useMemo(() => {
     const npps = new Set(filteredStores.map((store) => store.NPP).filter(Boolean))
@@ -693,23 +719,50 @@ export default function StoreFieldReportPage({
               onChange={(event) => {
                 setDateFilterMode(event.target.value as DateFilterMode)
                 setDateFilterValue('')
+                setDateRangeFrom('')
+                setDateRangeTo('')
               }}
             >
               <option value="day">Theo ngày</option>
               <option value="week">Theo tuần</option>
               <option value="month">Theo tháng</option>
+              <option value="range">Khoảng ngày</option>
             </select>
           </label>
 
-          <label className="combo-box" htmlFor="store-date-filter-value">
-            <span>{dateFilterMode === 'day' ? 'Ngày tạo' : dateFilterMode === 'week' ? 'Tuần tạo' : 'Tháng tạo'}</span>
-            <input
-              id="store-date-filter-value"
-              type={dateFilterMode === 'day' ? 'date' : dateFilterMode === 'week' ? 'week' : 'month'}
-              value={dateFilterValue}
-              onChange={(event) => setDateFilterValue(event.target.value)}
-            />
-          </label>
+          {dateFilterMode === 'range' ? (
+            <>
+              <label className="combo-box" htmlFor="store-date-filter-from">
+                <span>Từ ngày</span>
+                <input
+                  id="store-date-filter-from"
+                  type="date"
+                  value={dateRangeFrom}
+                  onChange={(event) => setDateRangeFrom(event.target.value)}
+                />
+              </label>
+
+              <label className="combo-box" htmlFor="store-date-filter-to">
+                <span>Đến ngày</span>
+                <input
+                  id="store-date-filter-to"
+                  type="date"
+                  value={dateRangeTo}
+                  onChange={(event) => setDateRangeTo(event.target.value)}
+                />
+              </label>
+            </>
+          ) : (
+            <label className="combo-box" htmlFor="store-date-filter-value">
+              <span>{dateFilterMode === 'day' ? 'Ngày tạo' : dateFilterMode === 'week' ? 'Tuần tạo' : 'Tháng tạo'}</span>
+              <input
+                id="store-date-filter-value"
+                type={dateFilterMode === 'day' ? 'date' : dateFilterMode === 'week' ? 'week' : 'month'}
+                value={dateFilterValue}
+                onChange={(event) => setDateFilterValue(event.target.value)}
+              />
+            </label>
+          )}
         </div>
 
         <div className="toolbar__actions">

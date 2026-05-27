@@ -11,7 +11,7 @@ type StoreReportModalProps = {
   canManagePlan: boolean
 }
 
-type DateFilterMode = 'day' | 'week' | 'month'
+type DateFilterMode = 'day' | 'week' | 'month' | 'range'
 
 type ReportPoint = {
   label: string
@@ -288,6 +288,8 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport, c
   const [creatorFilter, setCreatorFilter] = useState('')
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('day')
   const [dateFilterValue, setDateFilterValue] = useState('')
+  const [dateRangeFrom, setDateRangeFrom] = useState('')
+  const [dateRangeTo, setDateRangeTo] = useState('')
   const [dmsFilter, setDmsFilter] = useState<'all' | 'co' | 'chua'>('all')
   const [planMonth, setPlanMonth] = useState(getCurrentMonthKey())
   const [isPlanPanelOpen, setIsPlanPanelOpen] = useState(false)
@@ -312,6 +314,38 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport, c
     return Array.from(new Set([...creatorOptions, ...Object.keys(monthPlans)])).sort((a, b) => a.localeCompare(b))
   }, [creatorOptions, monthPlans])
 
+  const dateFilterSummaryText = useMemo(() => {
+    if (dateFilterMode === 'range') {
+      if (!dateRangeFrom && !dateRangeTo) {
+        return 'Tất cả'
+      }
+
+      if (dateRangeFrom && dateRangeTo) {
+        return `Từ ${dateRangeFrom} đến ${dateRangeTo}`
+      }
+
+      if (dateRangeFrom) {
+        return `Từ ${dateRangeFrom}`
+      }
+
+      return `Đến ${dateRangeTo}`
+    }
+
+    if (!dateFilterValue) {
+      return 'Tất cả'
+    }
+
+    if (dateFilterMode === 'day') {
+      return `Ngày ${dateFilterValue}`
+    }
+
+    if (dateFilterMode === 'week') {
+      return `Tuần ${dateFilterValue}`
+    }
+
+    return `Tháng ${dateFilterValue}`
+  }, [dateFilterMode, dateFilterValue, dateRangeFrom, dateRangeTo])
+
   const setCreatorPlan = (creator: string, planValue: number) => {
     const safeValue = normalizePlanValue(planValue)
 
@@ -335,7 +369,31 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport, c
     return stores.filter((store) => {
       const matchesCreator = !creatorFilter || getCreatorLabel(store) === creatorFilter
       const dateKey = getStoreDateKey(store)
-      const matchesDate = !dateFilterValue || (() => {
+      const matchesDate = (() => {
+        if (dateFilterMode === 'range') {
+          if (!dateRangeFrom && !dateRangeTo) {
+            return true
+          }
+
+          if (!dateKey) {
+            return false
+          }
+
+          if (dateRangeFrom && dateKey < dateRangeFrom) {
+            return false
+          }
+
+          if (dateRangeTo && dateKey > dateRangeTo) {
+            return false
+          }
+
+          return true
+        }
+
+        if (!dateFilterValue) {
+          return true
+        }
+
         if (!dateKey) {
           return false
         }
@@ -356,7 +414,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport, c
 
       return matchesCreator && matchesDate && matchesDms
     })
-  }, [creatorFilter, dateFilterMode, dateFilterValue, dmsFilter, stores])
+  }, [creatorFilter, dateFilterMode, dateFilterValue, dateRangeFrom, dateRangeTo, dmsFilter, stores])
 
   const byCreator = useMemo(() => {
     const map = new Map<string, number>()
@@ -930,14 +988,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport, c
     const filterSummary = `
       <tr><td colspan="${columnCount}" class="meta-row">Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}</td></tr>
       <tr><td colspan="${columnCount}" class="meta-row">Người tạo: ${creatorFilter || 'Tất cả'}</td></tr>
-      <tr><td colspan="${columnCount}" class="meta-row">Khoảng thời gian: ${dateFilterValue
-        ? dateFilterMode === 'day'
-          ? `Ngày ${dateFilterValue}`
-          : dateFilterMode === 'week'
-            ? `Tuần ${dateFilterValue}`
-            : `Tháng ${dateFilterValue}`
-        : 'Tất cả'
-      }</td></tr>
+      <tr><td colspan="${columnCount}" class="meta-row">Khoảng thời gian: ${dateFilterSummaryText}</td></tr>
       <tr><td colspan="${columnCount}" class="meta-row">Kế hoạch tháng áp dụng: ${planMonth}</td></tr>`
 
     const html = `<!doctype html>
@@ -1003,14 +1054,7 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport, c
     const filterSummary = [
       `Bộ lọc DMS: ${dmsFilter === 'co' ? 'Có trên DMS' : dmsFilter === 'chua' ? 'Chưa có trên DMS' : 'Tất cả'}`,
       `Người tạo: ${creatorFilter || 'Tất cả'}`,
-      `Khoảng thời gian: ${dateFilterValue
-        ? dateFilterMode === 'day'
-          ? `Ngày ${dateFilterValue}`
-          : dateFilterMode === 'week'
-            ? `Tuần ${dateFilterValue}`
-            : `Tháng ${dateFilterValue}`
-        : 'Tất cả'
-      }`,
+      `Khoảng thời gian: ${dateFilterSummaryText}`,
       `Tổng cửa hàng xuất: ${filteredStores.length}`,
     ]
 
@@ -1140,23 +1184,50 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport, c
                 onChange={(event) => {
                   setDateFilterMode(event.target.value as DateFilterMode)
                   setDateFilterValue('')
+                  setDateRangeFrom('')
+                  setDateRangeTo('')
                 }}
               >
                 <option value="day">Theo ngày</option>
                 <option value="week">Theo tuần</option>
                 <option value="month">Theo tháng</option>
+                <option value="range">Khoảng ngày</option>
               </select>
             </label>
 
-            <label className="combo-box" htmlFor="store-report-date-value">
-              <span>{dateFilterMode === 'day' ? 'Ngày tạo' : dateFilterMode === 'week' ? 'Tuần tạo' : 'Tháng tạo'}</span>
-              <input
-                id="store-report-date-value"
-                type={dateFilterMode === 'day' ? 'date' : dateFilterMode === 'week' ? 'week' : 'month'}
-                value={dateFilterValue}
-                onChange={(event) => setDateFilterValue(event.target.value)}
-              />
-            </label>
+            {dateFilterMode === 'range' ? (
+              <>
+                <label className="combo-box" htmlFor="store-report-date-from">
+                  <span>Từ ngày</span>
+                  <input
+                    id="store-report-date-from"
+                    type="date"
+                    value={dateRangeFrom}
+                    onChange={(event) => setDateRangeFrom(event.target.value)}
+                  />
+                </label>
+
+                <label className="combo-box" htmlFor="store-report-date-to">
+                  <span>Đến ngày</span>
+                  <input
+                    id="store-report-date-to"
+                    type="date"
+                    value={dateRangeTo}
+                    onChange={(event) => setDateRangeTo(event.target.value)}
+                  />
+                </label>
+              </>
+            ) : (
+              <label className="combo-box" htmlFor="store-report-date-value">
+                <span>{dateFilterMode === 'day' ? 'Ngày tạo' : dateFilterMode === 'week' ? 'Tuần tạo' : 'Tháng tạo'}</span>
+                <input
+                  id="store-report-date-value"
+                  type={dateFilterMode === 'day' ? 'date' : dateFilterMode === 'week' ? 'week' : 'month'}
+                  value={dateFilterValue}
+                  onChange={(event) => setDateFilterValue(event.target.value)}
+                />
+              </label>
+            )}
 
             <label className="combo-box" htmlFor="store-report-dms">
               <span>Có trên DMS</span>
