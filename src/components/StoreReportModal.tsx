@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { Store } from '../api'
 import { getLocationKey, getLocationLabel } from '../utils/locationNormalizer'
+import { KEHOACH } from '../data-ke-hoach/data'
 import PieChart from './PieChart'
 
 type StoreReportModalProps = {
@@ -53,10 +54,6 @@ type StorePercentRow = {
   bimUotDoiThu: string
 }
 
-type MonthlyPlanMap = Record<string, Record<string, number>>
-
-const PLAN_STORAGE_KEY = 'store-report-monthly-plans-v1'
-
 function getCurrentMonthKey(): string {
   const date = new Date()
   const year = date.getFullYear()
@@ -72,47 +69,7 @@ function normalizePlanValue(value: number): number {
   return Math.round(value)
 }
 
-function loadMonthlyPlans(): MonthlyPlanMap {
-  if (typeof window === 'undefined') {
-    return {}
-  }
 
-  try {
-    const raw = window.localStorage.getItem(PLAN_STORAGE_KEY)
-
-    if (!raw) {
-      return {}
-    }
-
-    const parsed = JSON.parse(raw) as unknown
-
-    if (!parsed || typeof parsed !== 'object') {
-      return {}
-    }
-
-    const result: MonthlyPlanMap = {}
-
-    Object.entries(parsed as Record<string, unknown>).forEach(([month, creators]) => {
-      if (!creators || typeof creators !== 'object') {
-        return
-      }
-
-      const monthData: Record<string, number> = {}
-
-      Object.entries(creators as Record<string, unknown>).forEach(([creator, value]) => {
-        if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
-          monthData[creator] = normalizePlanValue(value)
-        }
-      })
-
-      result[month] = monthData
-    })
-
-    return result
-  } catch {
-    return {}
-  }
-}
 
 function getCreatorLabel(store: Store): string {
   const value =
@@ -293,16 +250,8 @@ export default function StoreReportModal({ stores, isOpen, onClose, canExport, c
   const [dmsFilter, setDmsFilter] = useState<'all' | 'co' | 'chua'>('all')
   const [planMonth, setPlanMonth] = useState(getCurrentMonthKey())
   const [isPlanPanelOpen, setIsPlanPanelOpen] = useState(false)
-  const [monthlyPlans, setMonthlyPlans] = useState<MonthlyPlanMap>(() => loadMonthlyPlans())
+  const [monthlyPlans, setMonthlyPlans] = useState<Record<string, Record<string, number>>>(KEHOACH as Record<string, Record<string, number>>)
   const dragScrollRef = useRef({ isDragging: false, startX: 0, startScrollLeft: 0 })
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    window.localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(monthlyPlans))
-  }, [monthlyPlans])
 
   const monthPlans = useMemo(() => monthlyPlans[planMonth] ?? {}, [monthlyPlans, planMonth])
 
