@@ -223,6 +223,9 @@ const BOOLEAN_GROUPS: BooleanGroup[] = [
 ]
 
 const STORE_ID_KEYS = ['id', 'Id', 'ID', 'ma_ch', 'MaCH', 'stt', 'STT'] as const
+const DETAIL_IMAGE_KEYS = ['HinhAnh', 'hinh_anh', 'AnhCH', 'anh']
+const DETAIL_CREATOR_KEYS = ['NguoiTao', 'nguoi_tao', 'NguoiThucHien', 'TenNguoiThucHien', 'ten_nguoi_thuc_hien']
+const DETAIL_DATE_KEYS = ['ngay_tao', 'NgayTao', 'created_at', 'CreatedAt', 'ngayTao']
 
 function getStoreId(store: Store): number | null {
   for (const key of STORE_ID_KEYS) {
@@ -979,14 +982,37 @@ export default function StoreFieldReportPage({
               {(() => {
                 const entries = Object.entries(selectedStore)
 
-                const imageKeys = ['HinhAnh', 'hinh_anh', 'AnhCH', 'anh']
-                const creatorKeys = ['NguoiTao', 'nguoi_tao', 'NguoiThucHien', 'TenNguoiThucHien', 'ten_nguoi_thuc_hien']
-                const dateKeys = ['ngay_tao', 'NgayTao', 'created_at', 'CreatedAt', 'ngayTao']
-
-                const specialKeySet = new Set([...imageKeys, ...creatorKeys, ...dateKeys])
-
-                // render non-special fields first in original order
-                const normal = entries.filter(([k]) => !specialKeySet.has(k))
+                const knownDetailKeys = new Set<string>([
+                  ...STORE_ID_KEYS,
+                  ...STRING_FIELDS,
+                  ...OPTIONAL_TEXT_FIELDS,
+                  ...BOOLEAN_FIELDS,
+                  ...DETAIL_IMAGE_KEYS,
+                  ...DETAIL_CREATOR_KEYS,
+                  ...DETAIL_DATE_KEYS,
+                ])
+                const storeIdKey = STORE_ID_KEYS.find((key) => key in selectedStore)
+                const baseRows: Array<[string, unknown]> = [
+                  ['__section:base', 'Th&ocirc;ng tin c&#7917;a h&agrave;ng'],
+                  ...(storeIdKey ? ([[storeIdKey, selectedStore[storeIdKey]]] as Array<[string, unknown]>) : []),
+                  ...STRING_FIELDS.filter((field) => field in selectedStore).map((field) => [field, selectedStore[field]] as [string, unknown]),
+                ]
+                const booleanRows: Array<[string, unknown]> = BOOLEAN_GROUPS.flatMap((group) => [
+                  [`__section:${group.title}`, group.title] as [string, unknown],
+                  ...group.fields.map((field) => [field, selectedStore[field]] as [string, unknown]),
+                ])
+                const noteRows: Array<[string, unknown]> = OPTIONAL_TEXT_FIELDS
+                  .filter((field) => field !== 'HinhAnh' && field in selectedStore)
+                  .map((field) => [field, selectedStore[field]] as [string, unknown])
+                const extraRows = entries.filter(([key]) => !knownDetailKeys.has(key))
+                const normal: Array<[string, unknown]> = [
+                  ...baseRows,
+                  ...booleanRows,
+                  ...(noteRows.length ? ([['__section:note', 'Ghi ch&uacute; v&agrave; h&igrave;nh &#7843;nh']] as Array<[string, unknown]>) : []),
+                  ...noteRows,
+                  ...(extraRows.length ? ([['__section:extra', 'Th&ocirc;ng tin kh&aacute;c']] as Array<[string, unknown]>) : []),
+                  ...extraRows,
+                ]
 
                 // helper to find first existing key from a list
                 const findFirst = (keys: string[]) => {
@@ -996,18 +1022,40 @@ export default function StoreFieldReportPage({
                   return null
                 }
 
-                const imageKey = findFirst(imageKeys)
-                const dateKey = findFirst(dateKeys)
-                const creatorKey = findFirst(creatorKeys)
+                const imageKey = findFirst(DETAIL_IMAGE_KEYS)
+                const dateKey = findFirst(DETAIL_DATE_KEYS)
+                const creatorKey = findFirst(DETAIL_CREATOR_KEYS)
 
                 return (
                   <>
-                    {normal.map(([key, value]) => (
-                      <div className="detail-item" key={key}>
-                        <span>{getDetailLabel(key)}</span>
-                        <strong>{formatStoreValue(value)}</strong>
+                    {normal.map(([key, value]) => {
+                      if (key.startsWith('__section:')) {
+                        return (
+                          <div className="detail-section-title" key={key}>
+                            <h3 dangerouslySetInnerHTML={{ __html: String(value) }} />
+                          </div>
+                        )
+                      }
+
+                      const isBooleanField = BOOLEAN_FIELDS.includes(key as BooleanField)
+                      const isActive = isBooleanField && Boolean(value)
+
+                      return (
+                        <div
+                          className={`detail-item ${isBooleanField ? 'detail-item--status' : ''} ${isActive ? 'detail-item--active' : ''}`}
+                          key={key}
+                        >
+                          <span>{getDetailLabel(key)}</span>
+                          <strong>{formatStoreValue(value)}</strong>
+                        </div>
+                      )
+                    })}
+
+                    {!noteRows.length && imageKey && typeof (selectedStore as any)[imageKey] === 'string' && (selectedStore as any)[imageKey].trim() ? (
+                      <div className="detail-section-title">
+                        <h3>Ghi ch&uacute; v&agrave; h&igrave;nh &#7843;nh</h3>
                       </div>
-                    ))}
+                    ) : null}
 
                     {imageKey && typeof (selectedStore as any)[imageKey] === 'string' && (selectedStore as any)[imageKey].trim() ? (
                       <div className="detail-item" key={imageKey}>
@@ -1018,6 +1066,12 @@ export default function StoreFieldReportPage({
                           alt={selectedStore.TenCH ?? 'Hình ảnh cửa hàng'}
                           loading="lazy"
                         />
+                      </div>
+                    ) : null}
+
+                    {creatorKey || dateKey ? (
+                      <div className="detail-section-title">
+                        <h3>Th&ocirc;ng tin c&#7853;p nh&#7853;t</h3>
                       </div>
                     ) : null}
 
