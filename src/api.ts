@@ -11,8 +11,8 @@ export type Customer = {
   kinh_do?: number
 }
 
-const DEFAULT_API_URL = 'https://jsk9x6z4-3000.asse.devtunnels.ms/api/khachhang'
-const DEFAULT_STORE_API_URL = 'https://jsk9x6z4-3000.asse.devtunnels.ms/api/cuahang'
+const DEFAULT_API_URL = 'https://cd85mgkd-3000.jpe1.devtunnels.ms/api/khachhang'
+const DEFAULT_STORE_API_URL = 'https://cd85mgkd-3000.jpe1.devtunnels.ms/api/cuahang'
 
 export const API_URL = import.meta.env.VITE_KHACHHANG_API_URL ?? DEFAULT_API_URL
 export const STORE_API_URL = import.meta.env.VITE_CUAHANG_API_URL ?? DEFAULT_STORE_API_URL
