@@ -113,7 +113,7 @@ export function resolveImageUrl(path?: string) {
   }
 
   const normalizedPath = path.trim().replace(/\\/g, '/')
-  const UPLOAD_ORIGIN = 'https://jsk9x6z4-3000.asse.devtunnels.ms'
+  const UPLOAD_ORIGIN = 'https://cd85mgkd-3000.jpe1.devtunnels.ms'
 
   if (/^https?:\/\//i.test(normalizedPath)) {
     return normalizedPath
