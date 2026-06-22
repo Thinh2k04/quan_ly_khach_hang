@@ -8,6 +8,7 @@ import {
   type Store,
   type StorePayload,
 } from '../api'
+import Pagination from './Pagination'
 import { getDateKey, resolveImageUrl } from '../utils/customerFormatters'
 import { getLocationKey } from '../utils/locationNormalizer'
 import ConfirmDialog from './ConfirmDialog'
@@ -392,6 +393,7 @@ export default function StoreFieldReportPage({
   const [isReportOpen, setIsReportOpen] = useState(false)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [form, setForm] = useState<StorePayload>(INITIAL_FORM)
+  const [storePage, setStorePage] = useState(1)
 
   const loadAllStores = async () => {
     setStatus('loading')
@@ -622,6 +624,18 @@ export default function StoreFieldReportPage({
     })
   }, [canModify, canViewAll, creatorFilter, currentUserCode, currentUserName, dateFilterMode, dateFilterValue, dateRangeFrom, dateRangeTo, stores])
 
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setStorePage(1)
+  }, [search, creatorFilter, dateFilterMode, dateFilterValue, dateRangeFrom, dateRangeTo])
+
+  const ITEMS_PER_PAGE = 10
+  const totalStorePages = Math.ceil(filteredStores.length / ITEMS_PER_PAGE)
+  const paginatedStores = filteredStores.slice(
+    (storePage - 1) * ITEMS_PER_PAGE,
+    storePage * ITEMS_PER_PAGE,
+  )
+
   const metrics = useMemo(() => {
     const npps = new Set(filteredStores.map((store) => store.NPP).filter(Boolean))
     const provinces = new Set(filteredStores.map((store) => getLocationKey(store.Tinh)))
@@ -817,12 +831,12 @@ export default function StoreFieldReportPage({
                 </tr>
               </thead>
               <tbody>
-                {filteredStores.map((store, index) => {
+                {paginatedStores.map((store, index) => {
                   const storeId = getStoreId(store)
 
                   return (
                     <tr key={storeId ?? `${store.TenCH}-${index}`}>
-                      <td>{index + 1}</td>
+                      <td>{(storePage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                       <td>
                         <div className="customer-cell">
                           <div>
@@ -866,6 +880,11 @@ export default function StoreFieldReportPage({
                 })}
               </tbody>
             </table>
+            <Pagination
+              currentPage={storePage}
+              totalPages={totalStorePages}
+              onPageChange={setStorePage}
+            />
           </div>
         )}
       </main>

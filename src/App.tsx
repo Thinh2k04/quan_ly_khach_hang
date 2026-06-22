@@ -4,6 +4,7 @@ import CustomerDetailModal from './components/CustomerDetailModal'
 import ConfirmDialog from './components/ConfirmDialog'
 import CustomerReportModal from './components/CustomerReportModal'
 import LoginPage from './components/LoginPage'
+import Pagination from './components/Pagination'
 import StoreFieldReportPage from './components/StoreFieldReportPage'
 import { CREATOR_NAME_MAP, MAPPED_CREATOR_CODES } from './constants/creatorNames'
 import { formatDateToVnTime, getDateKey, normalizeSearchText, sameDay } from './utils/customerFormatters'
@@ -75,6 +76,7 @@ function App() {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetail | null>(null)
   const [isReportOpen, setIsReportOpen] = useState(false)
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
+  const [customerPage, setCustomerPage] = useState(1)
 
   const loadCustomers = async (forceReload = false) => {
     setStatus('loading')
@@ -202,6 +204,18 @@ function App() {
       )
     })
   }, [canViewAll, creatorFilter, currentUser, customers, dateFilter, isViewer, search])
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCustomerPage(1)
+  }, [search, creatorFilter, dateFilter])
+
+  const ITEMS_PER_PAGE = 10
+  const totalCustomerPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE)
+  const paginatedCustomers = filteredCustomers.slice(
+    (customerPage - 1) * ITEMS_PER_PAGE,
+    customerPage * ITEMS_PER_PAGE,
+  )
 
   const metrics = useMemo(() => {
     const categoryList = Array.from(
@@ -404,10 +418,10 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.map((customer, index) => {
+                {paginatedCustomers.map((customer, index) => {
                   return (
                     <tr key={customer.id}>
-                      <td>{index + 1}</td>
+                      <td>{(customerPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                       <td>
                         <div className="customer-cell">
                           <div>
@@ -446,6 +460,11 @@ function App() {
                 })}
               </tbody>
             </table>
+            <Pagination
+              currentPage={customerPage}
+              totalPages={totalCustomerPages}
+              onPageChange={setCustomerPage}
+            />
           </div>
         )}
 
