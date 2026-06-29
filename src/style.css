@@ -314,6 +314,38 @@
     align-items: center;
   }
 
+  .field-report-overview {
+    display: grid;
+    grid-template-columns: minmax(480px, 1fr) minmax(520px, 1fr);
+    gap: 24px;
+    align-items: stretch;
+    margin-bottom: 18px;
+  }
+
+  .field-report-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 0;
+  }
+
+  .field-report-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+
+  .field-report-filters .combo-box {
+    min-width: 0;
+  }
+
+  .field-report-toolbar .toolbar__filters {
+    min-width: 0;
+  }
+
+  .field-report-toolbar .search-box {
+    width: min(100%, 540px);
+  }
+
   .report-button {
     padding: 14px 18px;
     background: rgba(255, 255, 255, 0.94);
@@ -1487,6 +1519,19 @@
     .combo-box {
       min-width: 0;
     }
+
+    .field-report-overview {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .field-report-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field-report-filters {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 720px) {
@@ -1537,6 +1582,11 @@
       width: 100%;
       justify-content: flex-end;
       flex-wrap: wrap;
+    }
+
+    .field-report-stats,
+    .field-report-filters {
+      grid-template-columns: 1fr;
     }
 
     .pie-chart {

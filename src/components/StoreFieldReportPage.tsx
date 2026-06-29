@@ -10,7 +10,6 @@ import {
 } from '../api'
 import Pagination from './Pagination'
 import { getDateKey, resolveImageUrl } from '../utils/customerFormatters'
-import { getLocationKey } from '../utils/locationNormalizer'
 import ConfirmDialog from './ConfirmDialog'
 import StoreReportModal from './StoreReportModal'
 
@@ -637,15 +636,11 @@ export default function StoreFieldReportPage({
   )
 
   const metrics = useMemo(() => {
-    const npps = new Set(filteredStores.map((store) => store.NPP).filter(Boolean))
-    const provinces = new Set(filteredStores.map((store) => getLocationKey(store.Tinh)))
     const hasAcbtRack = filteredStores.filter((store) => Boolean(store.CoKeACBT)).length
     const hasHangingRack = filteredStores.filter((store) => Boolean(store.CoViACBT)).length
 
     return {
       total: filteredStores.length,
-      npps: npps.size,
-      provinces: provinces.size,
       hasAcbtRack,
       hasHangingRack,
     }
@@ -664,53 +659,28 @@ export default function StoreFieldReportPage({
         </div>
       </header>
 
-      <section className="stats-grid" aria-label="Thống kê cửa hàng">
-        <article className="stat-card">
-          <span>Tổng cửa hàng</span>
-          <strong>{metrics.total}</strong>
-        </article>
-        <article className="stat-card">
-          <span>NPP</span>
-          <strong>{metrics.npps}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Tỉnh/Thành</span>
-          <strong>{metrics.provinces}</strong>
-        </article>
-        <article className="stat-card stat-card--split" aria-label="Kệ ACBT và vỉ treo">
-          <div className="stat-card__split">
-            <div className="stat-card__split-item">
-              <span>Có kệ ACBT</span>
-              <strong>{metrics.hasAcbtRack}</strong>
+      <div className="field-report-overview">
+        <section className="stats-grid field-report-stats" aria-label="Thống kê cửa hàng">
+          <article className="stat-card">
+            <span>Tổng cửa hàng</span>
+            <strong>{metrics.total}</strong>
+          </article>
+          <article className="stat-card stat-card--split" aria-label="Kệ ACBT và vỉ treo">
+            <div className="stat-card__split">
+              <div className="stat-card__split-item">
+                <span>Có kệ ACBT</span>
+                <strong>{metrics.hasAcbtRack}</strong>
+              </div>
+              <div className="stat-card__split-divider" aria-hidden="true" />
+              <div className="stat-card__split-item">
+                <span>Có vỉ treo</span>
+                <strong>{metrics.hasHangingRack}</strong>
+              </div>
             </div>
-            <div className="stat-card__split-divider" aria-hidden="true" />
-            <div className="stat-card__split-item">
-              <span>Có vỉ treo</span>
-              <strong>{metrics.hasHangingRack}</strong>
-            </div>
-          </div>
-        </article>
-      </section>
+          </article>
+        </section>
 
-      <section className="toolbar">
-        <div className="toolbar__filters">
-
-          <label className="search-box" htmlFor="store-search">
-            <span>Tìm kiếm cửa hàng</span>
-            <input
-              id="store-search"
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  void handleSearch()
-                }
-              }}
-              placeholder="Nhập tên cửa hàng, địa chỉ, NPP..."
-            />
-          </label>
-
+        <div className="field-report-filters">
           <label className="combo-box" htmlFor="store-creator-filter">
             <span>Người tạo</span>
             <select
@@ -780,6 +750,26 @@ export default function StoreFieldReportPage({
               />
             </label>
           )}
+        </div>
+      </div>
+
+      <section className="toolbar field-report-toolbar">
+        <div className="toolbar__filters">
+          <label className="search-box" htmlFor="store-search">
+            <span>Tìm kiếm cửa hàng</span>
+            <input
+              id="store-search"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  void handleSearch()
+                }
+              }}
+              placeholder="Nhập tên cửa hàng, địa chỉ, NPP..."
+            />
+          </label>
         </div>
 
         <div className="toolbar__actions">
